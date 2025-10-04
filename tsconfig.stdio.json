@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "paths": {
+      "@/src/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [
+    "src/stdio.ts",
+    "src/tools/**/*",
+    "src/workspace/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/app/**/*",
+    "src/__tests__/**/*"
+  ]
+}

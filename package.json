@@ -1,0 +1,75 @@
+{
+  "name": "git-worktree-toolbox",
+  "version": "0.2.0",
+  "private": false,
+  "description": "MCP server for managing git worktrees and workspaces. Provides tools for creating isolated development environments, tracking changes, and managing collaborative workflows.",
+  "main": "dist/stdio.js",
+  "bin": {
+    "gwtree": "dist/stdio.js"
+  },
+  "scripts": {
+    "dev": "nodemon",
+    "build": "tsc -p tsconfig.stdio.json && tsc-alias -p tsconfig.stdio.json && node scripts/fix-imports.js",
+    "prepublishOnly": "npm run build",
+    "preview": "vite preview",
+    "inspect": "npx @modelcontextprotocol/inspector node dist/stdio.js",
+    "lint": "npx prettier . --fix && tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.3",
+    "glob": "^11.0.3",
+    "js-yaml": "^4.1.0",
+    "uuid": "^13.0.0",
+    "zod": "^3.24.2",
+    "zod-to-json-schema": "^3.24.6"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19.2.0",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/ui": "^3.2.4",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.10",
+    "postcss": "^8.5.4",
+    "prettier": "^3.6.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.5.0",
+    "tailwindcss": "^4.1.12",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.20.6",
+    "typescript": "^5",
+    "vite": "^6.0.11",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "git",
+    "workspace",
+    "worktree",
+    "development"
+  ],
+  "author": "Ben Rogerson <info@benrogerson.dev>",
+  "license": "MIT",
+  "homepage": "https://github.com/ben-rogerson/git-worktree-toolbox#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ben-rogerson/git-worktree-toolbox.git"
+  },
+  "type": "module",
+  "files": [
+    "dist/**/*",
+    "package.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

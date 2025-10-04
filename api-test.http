@@ -1,0 +1,16 @@
+@host = http://localhost:9245/api
+
+###
+
+# Gen slack
+POST {{host}}/events HTTP/1.1
+content-type: application/json
+x-slack-request-timestamp: 1755558783
+x-slack-signature: v0=fdb0a84e4c5a92546407a620cfbfe921707f22ce33687ffa023f1344d3608bab
+
+
+# curl -X POST http://localhost:9245/api/events \
+#   -H "Content-Type: application/json" \
+#   -H "X-Slack-Request-Timestamp: 1755558783" \
+#   -H "X-Slack-Signature: v0=fdb0a84e4c5a92546407a620cfbfe921707f22ce33687ffa023f1344d3608bab" \
+#   -d '{"token":"verification_token","challenge":"test_challenge_123","type":"url_verification"}'

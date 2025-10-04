@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "git-worktree-toolbox": {
+      "command": "http://localhost:9245/mcp"
+    }
+  }
+}
