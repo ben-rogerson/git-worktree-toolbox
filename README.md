@@ -1,8 +1,8 @@
-# Git Worktree Toolbox MCP Server
+# 🌳 Git Worktree Toolbox MCP Server (includes CLI)
 
-Ever wished you could work on multiple features simultaneously without cluttering your main branch? This MCP server makes that dream a reality by automatically managing git worktrees for your development tasks.
+Gives AI agents the power to spin up isolated git worktrees on demand. Work on multiple features in parallel, each with its own branch and workspace, without the branch-switching chaos.
 
-Each task gets its own isolated workspace with a dedicated branch, so you can experiment freely while keeping your main branch clean. Perfect for AI-assisted development where you want to explore different approaches without affecting your primary codebase.
+Each task runs in its own sandbox—experiment, break things, pivot strategies—while your main branch stays pristine. Built for AI-assisted workflows where rapid iteration and context switching are the norm.
 
 ### Available Tools
 
@@ -31,7 +31,7 @@ Each task gets its own isolated workspace with a dedicated branch, so you can ex
 
 ## Get Started
 
-### Install & Use
+Two installation options for this package:
 
 **Option 1: Use with npx (recommended)**
 
@@ -43,7 +43,7 @@ Each task gets its own isolated workspace with a dedicated branch, so you can ex
   "mcpServers": {
     "git-worktree-toolbox": {
       "command": "npx",
-      "args": ["-y", "git-worktree-toolbox"]
+      "args": ["-y", "git-worktree-toolbox@latest"]
     }
   }
 }
