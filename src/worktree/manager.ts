@@ -1,45 +1,45 @@
 /**
- * Workspace Manager
+ * Worktree Manager
  *
- * High-level workspace orchestration:
- * - Create workspaces (with git worktree + metadata + Claude config)
- * - Archive workspaces (update status, clean up config)
- * - Lookup by ID/path (retrieve workspace metadata)
+ * High-level worktree orchestration:
+ * - Create worktrees (with git worktree + metadata + Claude config)
+ * - Archive worktrees (update status, clean up config)
+ * - Lookup by ID/path (retrieve worktree metadata)
  * - Generate MR links (GitLab/GitHub merge request URLs)
  *
  * This manager coordinates between git operations, metadata management,
- * and Claude configuration to provide a unified workspace lifecycle.
+ * and Claude configuration to provide a unified worktree lifecycle.
  */
 
 import path from "path";
-import { createWorkTree } from "@/src/workspace/git-operations";
-import { WorkspaceMetadataManager } from "@/src/workspace/metadata";
-import { generateWorkspaceName, generateBranchName } from "@/src/utils/strings";
+import { createWorkTree } from "@/src/worktree/git-operations";
+import { WorktreeMetadataManager } from "@/src/worktree/metadata";
+import { generateWorktreeName, generateBranchName } from "@/src/utils/strings";
 import {
-  CreateWorkspaceOptions,
-  WorkspaceCreationResult,
+  CreateWorktreeOptions,
+  WorktreeCreationResult,
   WorktreeMetadata,
-} from "@/src/workspace/types";
-import { WorkspaceClaudeConfigGenerator } from "@/src/claude/configGenerator";
+} from "@/src/worktree/types";
+import { WorktreeClaudeConfigGenerator } from "@/src/claude/configGenerator";
 
-export interface WorkspaceManagerConfig {
+export interface WorktreeManagerConfig {
   base_worktrees_path?: string;
   project_directories?: string[];
 }
 
-export class WorkspaceManager {
+export class WorktreeManager {
   private baseWorktreesPath: string;
   public projectDirectories?: string[];
 
-  constructor(config: WorkspaceManagerConfig) {
+  constructor(config: WorktreeManagerConfig) {
     this.baseWorktreesPath = config.base_worktrees_path || "../worktrees";
     this.projectDirectories = config.project_directories;
   }
 
-  async createWorkspace(
-    options: CreateWorkspaceOptions,
-  ): Promise<WorkspaceCreationResult> {
-    const workspaceName = generateWorkspaceName(
+  async createWorktree(
+    options: CreateWorktreeOptions,
+  ): Promise<WorktreeCreationResult> {
+    const worktreeName = generateWorktreeName(
       options.task_description,
       options.user_id,
     );
@@ -48,46 +48,46 @@ export class WorkspaceManager {
     try {
       // Step 1: Create git worktree
       const worktree = await createWorkTree(
-        workspaceName,
+        worktreeName,
         branchName,
         undefined, // customPath
         options.git_repo_path,
       );
 
-      // Step 2: Create workspace metadata
-      const metadata = await WorkspaceMetadataManager.createMetadata(
+      // Step 2: Create worktree metadata
+      const metadata = await WorktreeMetadataManager.createMetadata(
         worktree.path,
         {
           task_description: options.task_description,
           user_id: options.user_id,
           base_branch: options.base_branch,
           auto_invite_users: options.auto_invite_users,
-          worktree_name: workspaceName,
+          worktree_name: worktreeName,
           branch: branchName,
         },
       );
 
       // Step 3: Create Claude configuration with auto-commit hooks
-      await WorkspaceClaudeConfigGenerator.createWorkspaceConfig({
+      await WorktreeClaudeConfigGenerator.createWorktreeConfig({
         worktreePath: worktree.path,
-        workspaceName: workspaceName,
+        worktreeName: worktreeName,
         channelId: null,
         channelName: null,
       });
 
       // Step 4: Add conversation entry
-      await WorkspaceMetadataManager.addConversationEntry(worktree.path, {
+      await WorktreeMetadataManager.addConversationEntry(worktree.path, {
         user_id: options.user_id,
         prompt: options.task_description,
-        claude_response: `Created workspace "${workspaceName}" and auto-commit enabled`,
+        claude_response: `Created worktree "${worktreeName}" and auto-commit enabled`,
       });
 
       return {
         task_id: metadata.worktree.id,
-        worktree_name: workspaceName,
+        worktree_name: worktreeName,
         worktree_path: worktree.path,
         invited_users: [],
-        metadata_path: await WorkspaceMetadataManager.getMetadataPath(
+        metadata_path: await WorktreeMetadataManager.getMetadataPath(
           worktree.path,
         ),
       };
@@ -96,77 +96,71 @@ export class WorkspaceManager {
       if (error instanceof Error) {
         throw error; // Re-throw the original error with its specific message
       }
-      throw new Error(`Failed to create workspace: ${error}`);
+      throw new Error(`Failed to create worktree: ${error}`);
     }
   }
 
-  async getWorkspaceByTaskId(taskId: string): Promise<{
+  async getWorktreeByTaskId(taskId: string): Promise<{
     worktreePath: string;
     metadata: WorktreeMetadata;
   } | null> {
-    return await WorkspaceMetadataManager.getWorkspaceByTaskId(
+    return await WorktreeMetadataManager.getWorktreeByTaskId(
       taskId,
       path.dirname(this.baseWorktreesPath),
     );
   }
 
-  async getWorkspaceByPathOrTaskId(pathOrTaskId: string): Promise<{
+  async getWorktreeByPathOrTaskId(pathOrTaskId: string): Promise<{
     worktreePath: string;
     metadata: WorktreeMetadata;
   } | null> {
-    return await WorkspaceMetadataManager.getWorkspaceByPathOrTaskId(
+    return await WorktreeMetadataManager.getWorktreeByPathOrTaskId(
       pathOrTaskId,
       path.dirname(this.baseWorktreesPath),
     );
   }
 
-  async archiveWorkspaceByTaskId(taskId: string): Promise<void> {
-    const workspace = await this.getWorkspaceByTaskId(taskId);
-    if (!workspace) {
-      throw new Error(`No workspace found for task ${taskId}`);
+  async archiveWorktreeByTaskId(taskId: string): Promise<void> {
+    const worktree = await this.getWorktreeByTaskId(taskId);
+    if (!worktree) {
+      throw new Error(`No worktree found for task ${taskId}`);
     }
 
     // Update metadata status
-    const metadata = workspace.metadata;
+    const metadata = worktree.metadata;
     metadata.worktree.status = "archived";
-    await WorkspaceMetadataManager.saveMetadata(
-      workspace.worktreePath,
-      metadata,
-    );
+    await WorktreeMetadataManager.saveMetadata(worktree.worktreePath, metadata);
 
     // Clean up Claude configuration
-    await WorkspaceClaudeConfigGenerator.removeWorkspaceConfig(
-      workspace.metadata.worktree.name,
+    await WorktreeClaudeConfigGenerator.removeWorktreeConfig(
+      worktree.metadata.worktree.name,
     );
   }
 
-  async archiveWorkspaceByPathOrTaskId(pathOrTaskId: string): Promise<void> {
-    const workspace = await this.getWorkspaceByPathOrTaskId(pathOrTaskId);
-    if (!workspace) {
-      throw new Error(`No workspace found for task/path ${pathOrTaskId}`);
+  async archiveWorktreeByPathOrTaskId(pathOrTaskId: string): Promise<void> {
+    const worktree = await this.getWorktreeByPathOrTaskId(pathOrTaskId);
+    if (!worktree) {
+      throw new Error(`No worktree found for task/path ${pathOrTaskId}`);
     }
 
     // Update metadata status
-    const metadata = workspace.metadata;
+    const metadata = worktree.metadata;
     metadata.worktree.status = "archived";
-    await WorkspaceMetadataManager.saveMetadata(
-      workspace.worktreePath,
-      metadata,
-    );
+    await WorktreeMetadataManager.saveMetadata(worktree.worktreePath, metadata);
 
     // Clean up Claude configuration
-    await WorkspaceClaudeConfigGenerator.removeWorkspaceConfig(
-      workspace.metadata.worktree.name,
+    await WorktreeClaudeConfigGenerator.removeWorktreeConfig(
+      worktree.metadata.worktree.name,
     );
   }
 
   async generateMRLinkByTaskId(taskId: string): Promise<string> {
-    const workspace = await this.getWorkspaceByTaskId(taskId);
-    if (!workspace) {
-      throw new Error(`No workspace found for task ${taskId}`);
+    const worktree = await this.getWorktreeByTaskId(taskId);
+    if (!worktree) {
+      throw new Error(`No worktree found for task ${taskId}`);
     }
 
-    const metadata = workspace.metadata;
+    const metadata = worktree.metadata;
     const branchName = metadata.worktree.branch;
     const baseBranch = metadata.git_info.base_branch;
 

@@ -1,15 +1,15 @@
 /**
- * Workspace Metadata Management
+ * Worktree Metadata Management
  *
- * YAML-based metadata operations for workspace management:
- * - Create/load/save workspace metadata (task.config.yaml)
+ * YAML-based metadata operations for worktree management:
+ * - Create/load/save worktree metadata (task.config.yaml)
  * - Conversation history tracking for AI interactions
  * - Auto-commit status tracking (enabled, last commit, pending changes, queue size)
- * - Workspace lookups by ID or path
+ * - Worktree lookups by ID or path
  * - Team member management (owners, collaborators)
  * - Git information tracking (base branch, current branch)
  *
- * Metadata is stored in .git/gwtree/task.config.yaml for each workspace.
+ * Metadata is stored in .git/gwtree/task.config.yaml for each worktree.
  * All operations include Zod validation for type safety.
  */
 
@@ -27,10 +27,10 @@ import { METADATA_DIR } from "@/src/utils/constants";
 import {
   WorktreeMetadata,
   ConversationEntry,
-  CreateWorkspaceOptions,
-} from "@/src/workspace/types";
+  CreateWorktreeOptions,
+} from "@/src/worktree/types";
 
-export class WorkspaceMetadataManager {
+export class WorktreeMetadataManager {
   private static readonly METADATA_FILE = "task.config.yaml";
 
   private static async getWorktreeGitDir(
@@ -71,7 +71,7 @@ export class WorkspaceMetadataManager {
 
   static async createMetadata(
     worktreePath: string,
-    options: Omit<CreateWorkspaceOptions, "channel_id"> & {
+    options: Omit<CreateWorktreeOptions, "channel_id"> & {
       worktree_name: string;
       branch: string;
     },
@@ -108,7 +108,7 @@ export class WorkspaceMetadataManager {
           timestamp: new Date().toISOString(),
           user_id: options.user_id || "anonymous",
           prompt: options.task_description,
-          claude_response: "Creating workspace for task...",
+          claude_response: "Creating worktree for task...",
         },
       ],
       auto_commit: {
@@ -250,7 +250,7 @@ export class WorkspaceMetadataManager {
     await this.saveMetadata(worktreePath, metadata);
   }
 
-  static async getWorkspaceByTaskId(
+  static async getWorktreeByTaskId(
     taskId: string,
     searchPath?: string,
   ): Promise<{
@@ -286,14 +286,14 @@ export class WorkspaceMetadataManager {
     return null;
   }
 
-  static async getWorkspaceByPathOrTaskId(
+  static async getWorktreeByPathOrTaskId(
     pathOrTaskId: string,
     searchPath?: string,
   ): Promise<{
     worktreePath: string;
     metadata: WorktreeMetadata;
   } | null> {
-    // First, check if it's a direct path to a workspace
+    // First, check if it's a direct path to a worktree
     if (path.isAbsolute(pathOrTaskId) && fs.existsSync(pathOrTaskId)) {
       try {
         const metadata = await this.loadMetadata(pathOrTaskId);
@@ -302,22 +302,22 @@ export class WorkspaceMetadataManager {
         }
       } catch (error) {
         // Path exists but no metadata - return null so caller can handle appropriately
-        console.warn(`Workspace at ${pathOrTaskId} exists but has no metadata`);
+        console.warn(`Worktree at ${pathOrTaskId} exists but has no metadata`);
         return null;
       }
     }
 
     // If not a valid path, treat as task ID
-    return await this.getWorkspaceByTaskId(pathOrTaskId, searchPath);
+    return await this.getWorktreeByTaskId(pathOrTaskId, searchPath);
   }
 
-  static async listAllWorkspaces(gitRepoPath?: string): Promise<
+  static async listAllWorktrees(gitRepoPath?: string): Promise<
     Array<{
       worktreePath: string;
       metadata: WorktreeMetadata | null;
     }>
   > {
-    const workspaces: Array<{
+    const worktrees: Array<{
       worktreePath: string;
       metadata: WorktreeMetadata | null;
     }> = [];
@@ -334,7 +334,7 @@ export class WorkspaceMetadataManager {
           // Process previous worktree if we have one
           if (currentWorktree && fs.existsSync(currentWorktree)) {
             const metadata = await this.loadMetadata(currentWorktree);
-            workspaces.push({ worktreePath: currentWorktree, metadata });
+            worktrees.push({ worktreePath: currentWorktree, metadata });
           }
           // Start new worktree
           currentWorktree = line.substring(9).trim();
@@ -344,14 +344,14 @@ export class WorkspaceMetadataManager {
       // Process the last worktree
       if (currentWorktree && fs.existsSync(currentWorktree)) {
         const metadata = await this.loadMetadata(currentWorktree);
-        workspaces.push({ worktreePath: currentWorktree, metadata });
+        worktrees.push({ worktreePath: currentWorktree, metadata });
       }
     } catch (error) {
       console.warn(`Warning: Could not list git worktrees: ${error}`);
     }
 
     // Sort by creation date (newest first)
-    return workspaces.sort(
+    return worktrees.sort(
       (a, b) =>
         new Date(b.metadata?.worktree?.created_at ?? "").getTime() -
         new Date(a.metadata?.worktree?.created_at ?? "").getTime(),

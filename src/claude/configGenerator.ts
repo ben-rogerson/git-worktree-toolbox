@@ -3,49 +3,49 @@ import * as path from "path";
 import * as os from "os";
 import { METADATA_DIR } from "../utils/constants";
 
-export interface WorkspaceClaudeConfig {
+export interface WorktreeClaudeConfig {
   worktreePath: string;
-  workspaceName: string;
+  worktreeName: string;
   channelId: string | null;
   channelName: string | null;
 }
 
 const claudeTasksDir = path.join(os.homedir(), ".claude_tasks");
 
-export class WorkspaceClaudeConfigGenerator {
+export class WorktreeClaudeConfigGenerator {
   /**
-   * Creates a Claude configuration file for a workspace with auto-commit hooks
+   * Creates a Claude configuration file for a worktree with auto-commit hooks
    */
-  static async createWorkspaceConfig(
-    config: WorkspaceClaudeConfig,
+  static async createWorktreeConfig(
+    config: WorktreeClaudeConfig,
   ): Promise<void> {
-    const workspaceConfigDir = path.join(claudeTasksDir, config.workspaceName);
-    const configPath = path.join(workspaceConfigDir, "settings.json");
+    const worktreeConfigDir = path.join(claudeTasksDir, config.worktreeName);
+    const configPath = path.join(worktreeConfigDir, "settings.json");
 
     // Ensure .claude_tasks directory exists
     if (!fs.existsSync(claudeTasksDir)) {
       fs.mkdirSync(claudeTasksDir, { recursive: true });
     }
 
-    // Ensure workspace-specific config directory exists
-    if (!fs.existsSync(workspaceConfigDir)) {
-      fs.mkdirSync(workspaceConfigDir, { recursive: true });
+    // Ensure worktree-specific config directory exists
+    if (!fs.existsSync(worktreeConfigDir)) {
+      fs.mkdirSync(worktreeConfigDir, { recursive: true });
     }
 
-    // Create workspace-specific auto-commit script
+    // Create worktree-specific auto-commit script
     const autoCommitScriptPath = path.join(
-      workspaceConfigDir,
+      worktreeConfigDir,
       "trigger-auto-commit.sh",
     );
-    await this.createWorkspaceAutoCommitScript(
+    await this.createWorktreeAutoCommitScript(
       autoCommitScriptPath,
       config.worktreePath,
-      config.workspaceName,
+      config.worktreeName,
     );
 
-    // Create workspace-specific CLI
-    const cliPath = path.join(workspaceConfigDir, "auto-commit-cli.js");
-    await this.createWorkspaceCLI(cliPath);
+    // Create worktree-specific CLI
+    const cliPath = path.join(worktreeConfigDir, "auto-commit-cli.js");
+    await this.createWorktreeCLI(cliPath);
 
     // Create Claude configuration with hooks
     const claudeConfig = {
@@ -94,7 +94,7 @@ export class WorkspaceClaudeConfigGenerator {
               },
               {
                 type: "command",
-                command: `osascript -e 'display notification "Claude finished working on ${config.workspaceName}" with title "✅ ${config.workspaceName} Complete" sound name "Glass"'`,
+                command: `osascript -e 'display notification "Claude finished working on ${config.worktreeName}" with title "✅ ${config.worktreeName} Complete" sound name "Glass"'`,
               },
             ],
           },
@@ -106,26 +106,26 @@ export class WorkspaceClaudeConfigGenerator {
     fs.writeFileSync(configPath, JSON.stringify(claudeConfig, null, 2));
 
     console.log(
-      `Created Claude configuration for workspace: ${config.workspaceName}`,
+      `Created Claude configuration for worktree: ${config.worktreeName}`,
     );
     console.log(`Config path: ${configPath}`);
   }
 
   /**
-   * Creates a workspace-specific auto-commit script
+   * Creates a worktree-specific auto-commit script
    */
-  private static async createWorkspaceAutoCommitScript(
+  private static async createWorktreeAutoCommitScript(
     scriptPath: string,
     worktreePath: string,
-    workspaceName: string,
+    worktreeName: string,
   ): Promise<void> {
     const scriptContent = `#!/bin/bash
 
-# Workspace-specific auto-commit script
-# This script triggers auto-commit when Claude finishes working in this workspace
+# Worktree-specific auto-commit script
+# This script triggers auto-commit when Claude finishes working in this worktree
 
-# Get the workspace directory
-WORKSPACE_ROOT="${worktreePath}"
+# Get the worktree directory
+WORKtree_ROOT="${worktreePath}"
 
 # Check if we're in a git repository
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
@@ -133,8 +133,8 @@ if ! git rev-parse --git-dir > /dev/null 2>&1; then
     exit 0
 fi
 
-# Check if auto-commit is enabled for this workspace
-METADATA_FILE="$WORKSPACE_ROOT/${METADATA_DIR}/task.config.yaml"
+# Check if auto-commit is enabled for this worktree
+METADATA_FILE="$WORKtree_ROOT/${METADATA_DIR}/task.config.yaml"
 AUTO_COMMIT_ENABLED="true"  # Default to enabled
 
 if [ -f "$METADATA_FILE" ]; then
@@ -150,18 +150,18 @@ if [ -f "$METADATA_FILE" ]; then
 fi
 
 if [ "$AUTO_COMMIT_ENABLED" != "true" ]; then
-    echo "Auto-commit disabled for this workspace"
+    echo "Auto-commit disabled for this worktree"
     exit 0
 fi
 
 # Check if there are any changes to commit
 if ! git diff --quiet || ! git diff --cached --quiet; then
-    echo "Changes detected in workspace, triggering auto-commit..."
+    echo "Changes detected in worktree, triggering auto-commit..."
     
-    # Trigger auto-commit using the workspace-specific CLI
-    node "$HOME/.claude_tasks/${workspaceName}/auto-commit-cli.js" force-commit "$WORKSPACE_ROOT"
+    # Trigger auto-commit using the worktree-specific CLI
+    node "$HOME/.claude_tasks/${worktreeName}/auto-commit-cli.js" force-commit "$WORKtree_ROOT"
 else
-    echo "No changes to commit in workspace"
+    echo "No changes to commit in worktree"
 fi
 `;
 
@@ -172,14 +172,14 @@ fi
   }
 
   /**
-   * Creates a workspace-specific CLI for auto-commit
+   * Creates a worktree-specific CLI for auto-commit
    */
-  private static async createWorkspaceCLI(cliPath: string): Promise<void> {
+  private static async createWorktreeCLI(cliPath: string): Promise<void> {
     const cliContent = `#!/usr/bin/env node
 
 /**
- * Workspace-specific CLI interface for auto-commit manager
- * This script triggers auto-commit for the specific workspace
+ * Worktree-specific CLI interface for auto-commit manager
+ * This script triggers auto-commit for the specific worktree
  */
 
 const { exec } = require("child_process");
@@ -205,10 +205,10 @@ async function forceCommit(worktreePath) {
     // Add all changes
     await execAsync("git add .", { cwd: worktreePath });
 
-    // Commit with timestamp and workspace context
+    // Commit with timestamp and worktree context
     const timestamp = new Date().toISOString();
-    const workspaceName = path.basename(worktreePath);
-    const commitMessage = \`Auto-commit: \${fileCount} files changed in \${workspaceName} at \${timestamp}\`;
+    const worktreeName = path.basename(worktreePath);
+    const commitMessage = \`Auto-commit: \${fileCount} files changed in \${worktreeName} at \${timestamp}\`;
 
     const { stdout: commitOutput } = await execAsync(
       \`git commit -m "\${commitMessage}"\`,
@@ -219,7 +219,7 @@ async function forceCommit(worktreePath) {
     const hashMatch = commitOutput.match(/\\[[\\w\\-\\/]+ ([a-f0-9]{7,})\\]/);
     const commitHash = hashMatch ? hashMatch[1] : "unknown";
 
-    console.log(\`Auto-committed \${fileCount} changes in \${workspaceName}: \${commitHash}\`);
+    console.log(\`Auto-committed \${fileCount} changes in \${worktreeName}: \${commitHash}\`);
 
     // Try to push to remote
     try {
@@ -254,7 +254,7 @@ async function getStatus(worktreePath) {
       pending_changes: fileCount,
       last_commit: lastCommit.trim(),
       has_changes: fileCount > 0,
-      workspace: path.basename(worktreePath),
+      worktree: path.basename(worktreePath),
     };
   } catch (error) {
     throw new Error(\`Status check failed: \${error.message}\`);
@@ -269,7 +269,7 @@ async function main() {
   try {
     switch (command) {
       case "force-commit":
-        console.log(\`Triggering auto-commit for workspace: \${worktreePath}\`);
+        console.log(\`Triggering auto-commit for worktree: \${worktreePath}\`);
         await forceCommit(worktreePath);
         console.log("Auto-commit completed successfully");
         break;
@@ -305,17 +305,15 @@ main().catch((error) => {
   }
 
   /**
-   * Removes Claude configuration for a workspace
+   * Removes Claude configuration for a worktree
    */
-  static async removeWorkspaceConfig(workspaceName: string): Promise<void> {
+  static async removeWorktreeConfig(worktreeName: string): Promise<void> {
     const claudeTasksDir = path.join(os.homedir(), ".claude_tasks");
-    const workspaceConfigDir = path.join(claudeTasksDir, workspaceName);
+    const worktreeConfigDir = path.join(claudeTasksDir, worktreeName);
 
-    if (fs.existsSync(workspaceConfigDir)) {
-      fs.rmSync(workspaceConfigDir, { recursive: true, force: true });
-      console.log(
-        `Removed Claude configuration for workspace: ${workspaceName}`,
-      );
+    if (fs.existsSync(worktreeConfigDir)) {
+      fs.rmSync(worktreeConfigDir, { recursive: true, force: true });
+      console.log(`Removed Claude configuration for worktree: ${worktreeName}`);
     }
   }
 }

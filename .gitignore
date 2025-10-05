@@ -40,6 +40,6 @@ yarn-error.log*
 # ---
 
 test-config.ts
-test-workspace/
+test-worktree/
 
 /dist

@@ -12,7 +12,7 @@ const packageJson = JSON.parse(
 );
 
 // Import all tools
-async function loadWorkspaceTools() {
+async function loadWorktreeTools() {
   try {
     const toolsModule = await import("./tools/index.js");
     return toolsModule;
@@ -54,7 +54,7 @@ function parseArgs(): {
 }
 
 async function runServer() {
-  const workspaceTools = await loadWorkspaceTools();
+  const worktreeTools = await loadWorktreeTools();
 
   const transport = new StdioServerTransport();
   const server = new Server(
@@ -65,7 +65,7 @@ async function runServer() {
     {
       capabilities: {
         tools: {
-          ...workspaceTools.capabilities(),
+          ...worktreeTools.capabilities(),
         },
       },
     },
@@ -77,7 +77,7 @@ async function runServer() {
     project_directories:
       process.env.PROJECT_DIRECTORIES?.split(":").filter(Boolean),
   };
-  workspaceTools.register(server, config);
+  worktreeTools.register(server, config);
 
   // Connect transport and start server
   await server.connect(transport);
@@ -86,27 +86,27 @@ async function runServer() {
   );
 }
 
-// TODO: Get these from the tools/index.ts file
-const TOOL_ALIASES: Record<string, string> = {
-  new: "create task workspace",
-  create: "create task workspace",
-  archive: "archive workspace",
-  launch: "launch workspace",
-  list: "list workspaces",
-  info: "get workspace info",
-  init: "initialize workspace metadata",
-  changes: "list changes from specific workspace",
-  commit: "force commit workspace",
-  merge: "merge workspace changes",
-  projects: "list projects",
-  mr: "generate mr link",
-};
+function buildToolAliases(
+  tools: { name: string; aliases?: string[] }[],
+): Record<string, string> {
+  const aliases: Record<string, string> = {};
+
+  for (const tool of tools) {
+    if (tool.aliases) {
+      for (const alias of tool.aliases) {
+        aliases[alias] = tool.name;
+      }
+    }
+  }
+
+  return aliases;
+}
 
 async function runTool(
   toolName: string,
   toolArgs: Record<string, unknown>,
 ): Promise<void> {
-  const workspaceTools = await loadWorkspaceTools();
+  const worktreeTools = await loadWorktreeTools();
 
   const config = {
     base_worktrees_path: process.env.BASE_WORKTREES_PATH,
@@ -114,18 +114,19 @@ async function runTool(
       process.env.PROJECT_DIRECTORIES?.split(":").filter(Boolean),
   };
 
-  const { WorkspaceManager } = await import("./workspace/manager.js");
-  const workspaceManager = new WorkspaceManager(config);
+  const { WorktreeManager } = await import("./worktree/manager.js");
+  const worktreeManager = new WorktreeManager(config);
 
+  const TOOL_ALIASES = buildToolAliases(worktreeTools.tools);
   const resolvedToolName = TOOL_ALIASES[toolName] || toolName;
-  const tool = workspaceTools.tools.find((t) => t.name === resolvedToolName);
+  const tool = worktreeTools.tools.find((t) => t.name === resolvedToolName);
   if (!tool) {
     throw new Error(
       `Unknown tool: ${toolName}. Run 'gwtree --help' to see available tools.`,
     );
   }
 
-  const result = await tool.cb(toolArgs, { workspaceManager });
+  const result = await tool.cb(toolArgs, { worktreeManager });
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -139,7 +140,8 @@ async function main() {
       break;
 
     case "help": {
-      const workspaceTools = await loadWorkspaceTools();
+      const worktreeTools = await loadWorktreeTools();
+      const TOOL_ALIASES = buildToolAliases(worktreeTools.tools);
       console.log(`🌳 Git Worktree Toolbox ${packageJson.version} CLI\n`);
       console.log("Usage:");
       console.log(
@@ -154,13 +156,14 @@ async function main() {
 
       const aliasMap = new Map<string, string[]>();
       for (const [alias, toolName] of Object.entries(TOOL_ALIASES)) {
-        if (!aliasMap.has(toolName)) {
-          aliasMap.set(toolName, []);
+        const name = String(toolName);
+        if (!aliasMap.has(name)) {
+          aliasMap.set(name, []);
         }
-        aliasMap.get(toolName)?.push(alias);
+        aliasMap.get(name)?.push(String(alias));
       }
 
-      for (const tool of workspaceTools.tools) {
+      for (const tool of worktreeTools.tools) {
         const aliases = aliasMap.get(tool.name);
         const aliasText = aliases ? ` (${aliases.join(", ")})` : "";
         console.log(`  ${tool.name}${aliasText}`);

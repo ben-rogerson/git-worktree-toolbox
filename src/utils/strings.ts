@@ -1,5 +1,5 @@
 /**
- * String Utilities - String manipulation for workspace/branch names: generate workspace names, generate branch names from descriptions
+ * String Utilities - String manipulation for worktree/branch names: generate worktree names, generate branch names from descriptions
  */
 
 export function sanitizeForGit(text: string): string {
@@ -31,7 +31,7 @@ export function extractKeywords(
     .slice(0, maxWords);
 }
 
-export function generateWorkspaceName(
+export function generateWorktreeName(
   taskDescription: string,
   userId?: string,
 ): string {

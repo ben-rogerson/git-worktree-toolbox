@@ -3,8 +3,8 @@ import {
   createWorkTree,
   listWorkTrees,
   removeWorkTree,
-} from "../workspace/git-operations";
-import type { WorkTree } from "../workspace/types";
+} from "../worktree/git-operations";
+import type { WorkTree } from "../worktree/types";
 import * as fs from "fs/promises";
 import { exec } from "child_process";
 import { promisify } from "util";

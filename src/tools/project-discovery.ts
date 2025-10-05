@@ -6,9 +6,9 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { autoCommitManager } from "@/src/workspace/auto-commit";
+import { autoCommitManager } from "@/src/worktree/auto-commit";
 import type { McpTool } from "@/src/tools/types";
-import type { WorkspaceManager } from "@/src/workspace/manager";
+import type { WorktreeManager } from "@/src/worktree/manager";
 
 // ============================================================================
 // Types
@@ -202,17 +202,18 @@ function discoverProjects(customDirectories?: string[]): DiscoveredProject[] {
 }
 
 export const listProjects = {
-  name: "list projects",
+  name: "list",
   description:
-    "Discover all git repositories in configured project directories. Recursively scans ~/Projects, ~/Code, ~/Developer by default (up to 3 levels deep), plus any custom directories configured. Ignores common build/cache directories like node_modules, dist, .git, etc.",
+    "Discover all git repositories across project directories (set with PROJECT_DIRECTORIES env variable).",
+  aliases: ["list"],
   parameters: () => ({}),
   cb: async (
     _args: Record<string, unknown>,
-    { workspaceManager }: { workspaceManager: WorkspaceManager },
+    { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
     try {
-      // Get configured directories from workspace manager
-      const configuredDirectories = workspaceManager.projectDirectories;
+      // Get configured directories from worktree manager
+      const configuredDirectories = worktreeManager.projectDirectories;
 
       const projects = discoverProjects(configuredDirectories);
       const scannedDirs = getScannedDirectories(configuredDirectories);
@@ -242,7 +243,7 @@ export const listProjects = {
       text += scannedDirs.map((dir) => `  • ${dir}`).join("\n") + "\n\n";
 
       if (projectsWithWorktrees.length > 0) {
-        text += `**Projects with workspaces (${projectsWithWorktrees.length}):**\n`;
+        text += `**Projects with worktrees (${projectsWithWorktrees.length}):**\n`;
         for (const project of projectsWithWorktrees) {
           text += `  ✅ **${project.name}**\n`;
           text += `     • Path: ${project.path}\n`;
@@ -251,7 +252,7 @@ export const listProjects = {
       }
 
       if (projectsWithoutWorktrees.length > 0) {
-        text += `**Projects without workspaces (${projectsWithoutWorktrees.length}):**\n`;
+        text += `**Projects without worktrees (${projectsWithoutWorktrees.length}):**\n`;
         for (const project of projectsWithoutWorktrees) {
           text += `  📦 **${project.name}**\n`;
           text += `     • Path: ${project.path}\n`;
@@ -259,8 +260,8 @@ export const listProjects = {
         text += "\n";
       }
 
-      text += `💡 Use the "list workspaces" tool with a project path to see existing workspaces.\n`;
-      text += `💡 Use the "create workspace" tool with a project path to create a new workspace.`;
+      text += `💡 Use the "list worktrees" tool with a project path to see existing worktrees.\n`;
+      text += `💡 Use the "create worktree" tool with a project path to create a new worktree.`;
 
       return {
         content: [{ type: "text", text }],
@@ -279,25 +280,26 @@ export const listProjects = {
 } satisfies McpTool;
 
 export const generateMrLink = {
-  name: "generate mr link",
-  description: "Generate a merge request link for a workspace",
+  name: "mr",
+  description: "Generate a merge request link for a worktree",
+  aliases: ["mr"],
   parameters: (z) => ({
-    task_id: z.string().describe("Task ID of the workspace"),
+    task_id: z.string().describe("Task ID of the worktree"),
   }),
   cb: async (
     args: Record<string, unknown>,
-    { workspaceManager }: { workspaceManager: WorkspaceManager },
+    { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
     try {
       const taskId = args.task_id as string;
 
       // Force commit any pending changes first
-      const workspace = await workspaceManager.getWorkspaceByTaskId(taskId);
-      if (workspace) {
-        await autoCommitManager.forceCommit(workspace.worktreePath);
+      const worktree = await worktreeManager.getWorktreeByTaskId(taskId);
+      if (worktree) {
+        await autoCommitManager.forceCommit(worktree.worktreePath);
       }
 
-      const mrLink = await workspaceManager.generateMRLinkByTaskId(taskId);
+      const mrLink = await worktreeManager.generateMRLinkByTaskId(taskId);
 
       return {
         content: [

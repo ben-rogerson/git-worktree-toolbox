@@ -1,8 +1,8 @@
-// Workspace Changes Tools - MCP tools for change management: list changes (listChangesFromSpecificWorkspace), force commit (forceCommitWorkspace), merge remote changes (mergeRemoteWorkspaceChangesIntoLocal)
+// Worktree Changes Tools - MCP tools for change management: list changes (listChangesFromSpecificWorktree), force commit (forceCommitWorktree), merge remote changes (mergeRemoteWorktreeChangesIntoLocal)
 
-import { WorkspaceManager } from "@/src/workspace/manager";
-import { WorkspaceMetadataManager } from "@/src/workspace/metadata";
-import { autoCommitManager } from "@/src/workspace/auto-commit";
+import { WorktreeManager } from "@/src/worktree/manager";
+import { WorktreeMetadataManager } from "@/src/worktree/metadata";
+import { autoCommitManager } from "@/src/worktree/auto-commit";
 import type { McpTool } from "@/src/tools/types";
 import {
   gitStatus,
@@ -13,38 +13,39 @@ import {
   executeGitCommand,
   gitDiffFileList,
 } from "@/src/utils/git";
-import { listWorkTrees } from "@/src/workspace/git-operations";
+import { listWorkTrees } from "@/src/worktree/git-operations";
 import { assertWorktreeName, sharedParameters } from "./utils";
 
-export const listChangesFromSpecificWorkspace = {
-  name: "list changes from specific workspace",
-  description: "List all git changes from a specific workspace",
+export const listChangesFromSpecificWorktree = {
+  name: "changes",
+  description: "Show all the changes in a worktree",
+  aliases: ["changes"],
   parameters: (z) => ({
-    workspace_identifier: sharedParameters.workspace_identifier(z),
+    worktree_identifier: sharedParameters.worktree_identifier(z),
   }),
   cb: async (
     args: Record<string, unknown>,
-    { workspaceManager }: { workspaceManager: WorkspaceManager },
+    { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
-    const { workspace_identifier } = args as { workspace_identifier: string };
+    const { worktree_identifier } = args as { worktree_identifier: string };
 
     try {
-      const workspace =
-        await workspaceManager.getWorkspaceByPathOrTaskId(workspace_identifier);
+      const worktree =
+        await worktreeManager.getWorktreeByPathOrTaskId(worktree_identifier);
 
-      if (!workspace) {
-        // List available workspaces for better error message
-        const workspaces = await WorkspaceMetadataManager.listAllWorkspaces();
+      if (!worktree) {
+        // List available worktrees for better error message
+        const worktrees = await WorktreeMetadataManager.listAllWorktrees();
         return {
           content: [
             {
               type: "text",
-              text: `❌ Workspace '${workspace_identifier}' not found.\n\nAvailable workspaces:\n${workspaces
+              text: `❌ Worktree '${worktree_identifier}' not found.\n\nAvailable worktrees:\n${worktrees
                 .map((ws) => {
                   if (ws.metadata) {
                     return `• ${ws.metadata.worktree.name} (${ws.metadata.worktree.id})`;
                   } else {
-                    // Fallback to path-based identifier for workspaces without metadata
+                    // Fallback to path-based identifier for worktrees without metadata
                     const pathParts = ws.worktreePath.split("/");
                     const folderName = pathParts[pathParts.length - 1];
                     return `• ${folderName} (no metadata) - ${ws.worktreePath}`;
@@ -56,8 +57,8 @@ export const listChangesFromSpecificWorkspace = {
         };
       }
 
-      const metadata = workspace.metadata;
-      const targetWorkspacePath = workspace.worktreePath;
+      const metadata = worktree.metadata;
+      const targetWorktreePath = worktree.worktreePath;
 
       // Get git status for uncommitted changes
       let statusOutput = "";
@@ -69,7 +70,7 @@ export const listChangesFromSpecificWorkspace = {
 
       try {
         statusOutput = await gitStatus({
-          cwd: targetWorkspacePath,
+          cwd: targetWorktreePath,
         });
 
         if (statusOutput.trim()) {
@@ -95,7 +96,7 @@ export const listChangesFromSpecificWorkspace = {
         }
       } catch (error) {
         console.warn(
-          `Warning: Could not get git status for ${targetWorkspacePath}: ${error}`,
+          `Warning: Could not get git status for ${targetWorktreePath}: ${error}`,
         );
       }
 
@@ -104,19 +105,19 @@ export const listChangesFromSpecificWorkspace = {
       try {
         // Try diff from main branch first
         diffStats = await gitDiffStats("main", "HEAD", {
-          cwd: targetWorkspacePath,
+          cwd: targetWorktreePath,
         });
       } catch {
         try {
           // Fallback: try diff from origin/main
           diffStats = await gitDiffStats("origin/main", "HEAD", {
-            cwd: targetWorkspacePath,
+            cwd: targetWorktreePath,
           });
         } catch {
           // If all else fails, get uncommitted changes only
           try {
             diffStats = await gitDiffStats(undefined, undefined, {
-              cwd: targetWorkspacePath,
+              cwd: targetWorktreePath,
             });
           } catch {
             // No diff stats available
@@ -128,7 +129,7 @@ export const listChangesFromSpecificWorkspace = {
       let currentBranch = "unknown";
       try {
         currentBranch = await gitCurrentBranch({
-          cwd: targetWorkspacePath,
+          cwd: targetWorktreePath,
         });
       } catch (error) {
         console.warn(`Warning: Could not get current branch: ${error}`);
@@ -151,7 +152,7 @@ export const listChangesFromSpecificWorkspace = {
           ? `${diffStats.files} files (+${diffStats.insertions}/-${diffStats.deletions})`
           : "No committed changes";
 
-      const integrationInfo = "Workspace-only mode";
+      const integrationInfo = "Worktree-only mode";
 
       const teamSize = metadata.team.assigned_users.length;
       const conversationCount = metadata.conversation_history.length;
@@ -164,12 +165,12 @@ export const listChangesFromSpecificWorkspace = {
           {
             type: "text",
             text:
-              `📊 **Workspace Changes: ${metadata.worktree.name}**\n\n` +
+              `📊 **Worktree Changes: ${metadata.worktree.name}**\n\n` +
               `**Basic Info:**\n` +
               `• **Task ID:** ${metadata.worktree.id}\n` +
               `• **Status:** ${metadata.worktree.status}\n` +
               `• **Branch:** ${currentBranch}\n` +
-              `• **Path:** ${targetWorkspacePath}\n` +
+              `• **Path:** ${targetWorktreePath}\n` +
               `• **Created:** ${new Date(metadata.worktree?.created_at ?? "").toLocaleDateString()}\n` +
               `• **Created By:** ${metadata.worktree.created_by}\n` +
               `• **Team Size:** ${teamSize} member${teamSize !== 1 ? "s" : ""}\n` +
@@ -180,7 +181,7 @@ export const listChangesFromSpecificWorkspace = {
               `• **Committed Changes:** ${committedText}\n` +
               `• **Uncommitted Changes:** ${uncommittedChanges.length} file${uncommittedChanges.length !== 1 ? "s" : ""}\n\n` +
               `**Uncommitted Files:**\n${uncommittedText}\n\n` +
-              `💡 Use "force commit workspace" with task ID ${metadata.worktree.id} to commit pending changes.`,
+              `💡 Use "force commit worktree" with task ID ${metadata.worktree.id} to commit pending changes.`,
           },
         ],
       };
@@ -189,7 +190,7 @@ export const listChangesFromSpecificWorkspace = {
         content: [
           {
             type: "text",
-            text: `❌ Failed to get workspace changes: ${error instanceof Error ? error.message : "Unknown error"}`,
+            text: `❌ Failed to get worktree changes: ${error instanceof Error ? error.message : "Unknown error"}`,
           },
         ],
       };
@@ -197,40 +198,41 @@ export const listChangesFromSpecificWorkspace = {
   },
 } satisfies McpTool;
 
-export const forceCommitWorkspace = {
-  name: "force commit workspace",
-  description: "Push all commits in a workspace",
+export const forceCommitWorktree = {
+  name: "push",
+  description: "Commit and push all changes",
+  aliases: ["push"],
   parameters: (z) => ({
     task_id: sharedParameters.task_id(z),
   }),
   cb: async (
     args: Record<string, unknown>,
-    { workspaceManager }: { workspaceManager: WorkspaceManager },
+    { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
     const { task_id } = args as { task_id: string };
 
     try {
-      const workspace = await workspaceManager.getWorkspaceByTaskId(task_id);
+      const worktree = await worktreeManager.getWorktreeByTaskId(task_id);
 
-      if (!workspace) {
+      if (!worktree) {
         return {
           content: [
             {
               type: "text",
-              text: `❌ No workspace found for task ${task_id}`,
+              text: `❌ No worktree found for task ${task_id}`,
             },
           ],
         };
       }
 
-      await autoCommitManager.forceCommit(workspace.worktreePath);
+      await autoCommitManager.forceCommit(worktree.worktreePath);
 
       return {
         content: [
           {
             type: "text",
             text:
-              `✅ Force commit completed for workspace\n\n` +
+              `✅ Force commit completed for worktree\n\n` +
               `All pending changes have been committed and pushed.`,
           },
         ],
@@ -248,10 +250,11 @@ export const forceCommitWorkspace = {
   },
 } satisfies McpTool;
 
-export const mergeRemoteWorkspaceChangesIntoLocal = {
-  name: "merge workspace changes",
+export const mergeRemoteWorktreeChangesIntoLocal = {
+  name: "grab",
   description:
-    "Merge all changes from another workspace into the current workspace",
+    "Merge all changes from another worktree into the current worktree",
+  aliases: ["grab"],
   parameters: (z) => ({
     worktree_name: sharedParameters.worktree_name(z),
     git_repo_path: sharedParameters.git_repo_path_optional(z),
@@ -259,7 +262,7 @@ export const mergeRemoteWorkspaceChangesIntoLocal = {
   }),
   cb: async (
     args: Record<string, unknown>,
-    {}: { workspaceManager: WorkspaceManager },
+    {}: { worktreeManager: WorktreeManager },
   ) => {
     const { worktree_name, git_repo_path, avoid_dry_run } = args as {
       worktree_name: string;

@@ -6,7 +6,7 @@ import * as path from "path";
 import * as fsPromises from "fs/promises";
 import { z } from "zod";
 import { executeGitCommand } from "@/src/utils/git";
-import type { WorkTree } from "@/src/workspace/types";
+import type { WorkTree } from "@/src/worktree/types";
 
 type ZodNamespace = typeof z;
 
@@ -23,10 +23,10 @@ type ZodNamespace = typeof z;
  */
 export const sharedParameters = {
   /**
-   * Workspace identifier parameter - accepts task ID or absolute path
+   * Worktree identifier parameter - accepts task ID or absolute path
    */
-  workspace_identifier: (z: ZodNamespace) =>
-    z.string().describe("Task ID or absolute path to the workspace"),
+  worktree_identifier: (z: ZodNamespace) =>
+    z.string().describe("Task ID or absolute path to the worktree"),
 
   /**
    * Git repository path parameter
@@ -48,7 +48,7 @@ export const sharedParameters = {
   /**
    * Task ID parameter
    */
-  task_id: (z: ZodNamespace) => z.string().describe("Task ID of the workspace"),
+  task_id: (z: ZodNamespace) => z.string().describe("Task ID of the worktree"),
 
   /**
    * Worktree name parameter
@@ -213,20 +213,20 @@ export const assertWorktreeName = async (
  */
 export const createMissingMetadataResponse = (
   context: string,
-  workspacePath: string,
-  workspaceName?: string,
+  worktreePath: string,
+  worktreeName?: string,
 ): MissingMetadataResponse => {
-  const workspaceIdentifier =
-    workspaceName || workspacePath.split("/").pop() || "workspace";
+  const worktreeIdentifier =
+    worktreeName || worktreePath.split("/").pop() || "worktree";
 
   return {
     content: [
       {
         type: "text",
         text:
-          `❌ Failed to ${context}: **${workspaceIdentifier}** has no metadata\n\n` +
+          `❌ Failed to ${context}: **${worktreeIdentifier}** has no metadata\n\n` +
           `💡 **Solution**: Initialize metadata first using:\n` +
-          `"initialize workspace metadata" with workspace_path: "${workspacePath}"\n\n` +
+          `"initialize worktree metadata" with worktree_path: "${worktreePath}"\n\n` +
           `This will create the necessary metadata so you can then ${context}.`,
       },
     ],
@@ -238,29 +238,29 @@ export const createMissingMetadataResponse = (
  */
 export const createMissingMetadataError = (
   context: string,
-  workspacePath: string,
+  worktreePath: string,
 ): Error => {
   return new Error(
-    `No metadata found for worktree at ${workspacePath}. ` +
-      `Initialize metadata using "initialize workspace metadata" tool first before ${context}.`,
+    `No metadata found for worktree at ${worktreePath}. ` +
+      `Initialize metadata using "initialize worktree metadata" tool first before ${context}.`,
   );
 };
 
 /**
- * Creates a standardized warning text for listing workspaces without metadata
+ * Creates a standardized warning text for listing worktrees without metadata
  */
 export const createMissingMetadataWarning = (
-  workspacePath: string,
+  worktreePath: string,
   index?: number,
 ): string => {
   const prefix =
     index !== undefined
-      ? `**${index + 1}. ${workspacePath}**`
-      : `**${workspacePath}**`;
+      ? `**${index + 1}. ${worktreePath}**`
+      : `**${worktreePath}**`;
 
   return (
     `${prefix}\n` +
     `  ⚠️ This git dir requires setup (No metadata found)\n` +
-    `  💡 **Fix**: Use "initialize workspace metadata" with workspace_path: "${workspacePath}"\n`
+    `  💡 **Fix**: Use "initialize worktree metadata" with worktree_path: "${worktreePath}"\n`
   );
 };

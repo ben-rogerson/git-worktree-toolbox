@@ -30,7 +30,7 @@ import {
 } from "@/src/utils/fs";
 import { METADATA_DIR } from "@/src/utils/constants";
 import { assertGitRepoPath } from "@/src/tools/utils";
-import { WorkTree, WorkTreeError } from "@/src/workspace/types";
+import { WorkTree, WorkTreeError } from "@/src/worktree/types";
 
 export interface WorktreeMetadataFile {
   id: string;

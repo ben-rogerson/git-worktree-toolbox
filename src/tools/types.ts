@@ -1,6 +1,6 @@
 // MCP Tool Types - Type definitions for Model Context Protocol tools: tool interface, parameter schemas, response formats
 
-import { WorkspaceManager } from "@/src/workspace/manager";
+import { WorktreeManager } from "@/src/worktree/manager";
 import { z, type ZodType } from "zod";
 
 type ZodNamespace = typeof z;
@@ -8,10 +8,11 @@ type ZodNamespace = typeof z;
 export type McpTool = {
   name: string;
   description: string;
+  aliases?: string[];
   parameters: (z: ZodNamespace) => Record<string, ZodType>;
   cb: (
     args: Record<string, unknown>,
-    { workspaceManager }: { workspaceManager: WorkspaceManager },
+    { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => Promise<{
     content: {
       type: "text" | "image";

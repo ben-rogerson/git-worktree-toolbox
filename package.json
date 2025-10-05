@@ -2,7 +2,7 @@
   "name": "git-worktree-toolbox",
   "version": "0.1.0",
   "private": false,
-  "description": "MCP server for managing git worktrees and workspaces. Provides tools for creating isolated development environments, tracking changes, and managing collaborative workflows.",
+  "description": "MCP server for managing git worktrees with synchronized branches. Provides tools for creating isolated development environments, tracking changes, and managing collaborative workflows.",
   "main": "dist/stdio.js",
   "bin": {
     "gwtree": "dist/stdio.js"
@@ -52,7 +52,6 @@
     "mcp",
     "model-context-protocol",
     "git",
-    "workspace",
     "worktree",
     "development"
   ],

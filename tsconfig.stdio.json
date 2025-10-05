@@ -22,7 +22,7 @@
   "include": [
     "src/stdio.ts",
     "src/tools/**/*",
-    "src/workspace/**/*"
+    "src/worktree/**/*"
   ],
   "exclude": [
     "node_modules",

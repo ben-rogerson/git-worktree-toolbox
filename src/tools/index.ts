@@ -1,55 +1,76 @@
 /**
- * MCP Tool Registration - Registers all workspace tools with MCP server:
+ * MCP Tool Registration - Registers all worktree tools with MCP server:
  * lifecycle tools, change management tools, project discovery tools
  */
 
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import { WorkspaceManager } from "../workspace/manager.js";
+import { WorktreeManager } from "../worktree/manager.js";
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import type { McpTool } from "./types.js";
 
-// Workspace Lifecycle Tools
+// Worktree Lifecycle Tools
 import {
-  createTaskWorkspace,
-  archiveWorkspace,
-  launchWorkspace,
-  listWorkspaces,
-  getWorkspaceInfo,
-  initializeWorkspaceMetadata,
-} from "./workspace-lifecycle.js";
+  createTaskWorktree,
+  archiveWorktree,
+  launchWorktree,
+  getWorktreeInfo,
+  initializeWorktreeMetadata,
+} from "./worktree-lifecycle.js";
 
-// Workspace Changes Tools
+// Worktree Changes Tools
 import {
-  listChangesFromSpecificWorkspace,
-  forceCommitWorkspace,
-  mergeRemoteWorkspaceChangesIntoLocal,
-} from "./workspace-changes.js";
+  listChangesFromSpecificWorktree,
+  forceCommitWorktree,
+  mergeRemoteWorktreeChangesIntoLocal,
+} from "./worktree-changes.js";
 
 // Project Discovery Tools
 import { listProjects, generateMrLink } from "./project-discovery.js";
 
-export interface WorkspaceMcpToolsConfig {
+export interface WorktreeMcpToolsConfig {
   base_worktrees_path?: string;
   project_directories?: string[];
 }
 
+// TODO: Get these from the tools/index.ts file
+const TOOL_ALIASES: Record<string, string> = {
+  // Discovery & Navigation
+  list: "list projects and their worktrees",
+  info: "get worktree info",
+  // Worktree Lifecycle
+  new: "create task worktree",
+  create: "create task worktree",
+  init: "initialize worktree metadata",
+  archive: "archive worktree",
+  go: "open worktree in IDE/terminal",
+  // Change Management
+  changes: "list changes",
+  push: "commit and push all changes",
+  grab: "merge changes from another worktree",
+  // Integration
+  mr: "generate mr link",
+};
+
 export const tools = [
-  createTaskWorkspace,
-  archiveWorkspace,
-  launchWorkspace,
-  listWorkspaces,
-  getWorkspaceInfo,
-  initializeWorkspaceMetadata,
-  listChangesFromSpecificWorkspace,
-  forceCommitWorkspace,
-  mergeRemoteWorkspaceChangesIntoLocal,
+  // Discovery & Navigation
   listProjects,
+  getWorktreeInfo,
+  // Worktree Lifecycle
+  createTaskWorktree,
+  initializeWorktreeMetadata,
+  archiveWorktree,
   generateMrLink,
+  // Change Management
+  listChangesFromSpecificWorktree,
+  forceCommitWorktree,
+  launchWorktree,
+  // Integration
+  mergeRemoteWorktreeChangesIntoLocal,
 ] satisfies McpTool[];
 
-export function register(server: Server, config: WorkspaceMcpToolsConfig) {
-  const workspaceManager = new WorkspaceManager(config);
+export function register(server: Server, config: WorktreeMcpToolsConfig) {
+  const worktreeManager = new WorktreeManager(config);
 
   server.setRequestHandler(
     z.object({
@@ -84,7 +105,7 @@ export function register(server: Server, config: WorkspaceMcpToolsConfig) {
       if (!tool) {
         throw new Error(`Unknown tool: ${request.params.name}`);
       }
-      return tool.cb(request.params.arguments || {}, { workspaceManager });
+      return tool.cb(request.params.arguments || {}, { worktreeManager });
     },
   );
 }

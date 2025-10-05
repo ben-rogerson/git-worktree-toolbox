@@ -1,16 +1,16 @@
 /**
- * Workspace Lifecycle Tools - MCP tools for workspace management:
- * create (createTaskWorkspace), archive (archiveWorkspace), launch (launchWorkspace),
- * list (listWorkspaces), info (getWorkspaceInfo), initialize (initializeWorkspaceMetadata)
+ * Worktree Lifecycle Tools - MCP tools for worktree management:
+ * create (createTaskWorktree), archive (archiveWorktree), launch (launchWorktree),
+ * info (getWorktreeInfo), initialize (initializeWorktreeMetadata)
  */
 
 import * as path from "path";
 import * as fs from "fs";
 import { execSync } from "child_process";
-import { autoCommitManager } from "@/src/workspace/auto-commit";
-import { WorkspaceMetadataManager } from "@/src/workspace/metadata";
+import { autoCommitManager } from "@/src/worktree/auto-commit";
+import { WorktreeMetadataManager } from "@/src/worktree/metadata";
 import type { McpTool } from "@/src/tools/types";
-import type { WorkspaceManager } from "@/src/workspace/manager";
+import type { WorktreeManager } from "@/src/worktree/manager";
 import {
   gitHasPendingChanges,
   gitWorktreeRemove,
@@ -29,13 +29,13 @@ import {
 } from "./utils";
 
 // ============================================================================
-// Tool: Create Task Workspace
+// Tool: Create Task Worktree
 // ============================================================================
 
-export const createTaskWorkspace = {
-  name: "create task workspace",
-  description:
-    "Create a new workspace and git worktree in a specific git repository",
+export const createTaskWorktree = {
+  name: "create",
+  description: "Create a new worktree with matching branch",
+  aliases: ["new", "create"],
   parameters: (z) => ({
     task_description: z
       .string()
@@ -46,7 +46,7 @@ export const createTaskWorkspace = {
   }),
   cb: async (
     args: Record<string, unknown>,
-    { workspaceManager }: { workspaceManager: WorkspaceManager },
+    { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
     const { task_description, user_id, base_branch, git_repo_path } = args as {
       task_description: string;
@@ -72,7 +72,7 @@ export const createTaskWorkspace = {
     }
 
     try {
-      const wsResult = await workspaceManager.createWorkspace({
+      const wsResult = await worktreeManager.createWorktree({
         task_description,
         user_id,
         base_branch,
@@ -87,9 +87,9 @@ export const createTaskWorkspace = {
           {
             type: "text",
             text:
-              `✅ Workspace created successfully!\n\n` +
+              `✅ Worktree created successfully!\n\n` +
               `**Task ID:** ${wsResult.task_id}\n` +
-              `**Integration:** Workspace-only mode\n` +
+              `**Integration:** Worktree-only mode\n` +
               `**Worktree:** ${wsResult.worktree_name}\n` +
               `**Path:** ${wsResult.worktree_path}\n` +
               `**Auto-commit:** Enabled\n` +
@@ -100,7 +100,7 @@ export const createTaskWorkspace = {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      let userFriendlyMessage = `❌ Failed to create workspace: ${errorMessage}`;
+      let userFriendlyMessage = `❌ Failed to create worktree: ${errorMessage}`;
 
       // Provide specific guidance for common errors
       if (errorMessage.includes("WorkTreeError")) {
@@ -126,34 +126,34 @@ export const createTaskWorkspace = {
 } satisfies McpTool;
 
 // ============================================================================
-// Tool: Archive Workspace
+// Tool: Archive Worktree
 // ============================================================================
-
-export const archiveWorkspace = {
-  name: "archive workspace",
-  description: "Archive a workspace by task ID or workspace path",
+export const archiveWorktree = {
+  name: "archive worktree",
+  description: "Archive a worktree",
+  aliases: ["archive"],
   parameters: (z) => ({
-    workspace_identifier: sharedParameters.workspace_identifier(z),
+    worktree_identifier: sharedParameters.worktree_identifier(z),
     has_branch_removal: z
       .boolean()
       .describe("Remove the matching worktree branch"),
   }),
   cb: async (
     args: Record<string, unknown>,
-    { workspaceManager }: { workspaceManager: WorkspaceManager },
+    { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
-    const { workspace_identifier, has_branch_removal } = args as {
-      workspace_identifier: string;
+    const { worktree_identifier, has_branch_removal } = args as {
+      worktree_identifier: string;
       has_branch_removal?: boolean;
     };
-    const id = workspace_identifier.trim();
+    const id = worktree_identifier.trim();
     try {
-      const workspace = await workspaceManager.getWorkspaceByPathOrTaskId(id);
+      const worktree = await worktreeManager.getWorktreeByPathOrTaskId(id);
 
-      if (!workspace) {
+      if (!worktree) {
         // Check if the path exists but has no metadata - archive it anyway
         if (path.isAbsolute(id) && fs.existsSync(id)) {
-          // Archive workspace without metadata
+          // Archive worktree without metadata
           await autoCommitManager.disableAutoCommit(id);
 
           // Check for pending changes
@@ -213,10 +213,10 @@ export const archiveWorkspace = {
             blockReason = "pending changes detected";
           }
 
-          const workspaceName = path.basename(id);
+          const worktreeName = path.basename(id);
           const details = [
             "- Auto-commit disabled",
-            "- No metadata was present (workspace archived as-is)",
+            "- No metadata was present (worktree archived as-is)",
           ];
 
           if (removalBlocked) {
@@ -246,22 +246,22 @@ export const archiveWorkspace = {
               {
                 type: "text",
                 text:
-                  `📦 Successfully archived workspace "${workspaceName}"\n\n` +
-                  `Workspace has been safely archived. Auto-commit has been disabled.\n\n` +
+                  `📦 Successfully archived worktree "${worktreeName}"\n\n` +
+                  `Worktree has been safely archived. Auto-commit has been disabled.\n\n` +
                   `Details:\n${details.join("\n")}`,
               },
             ],
           };
         }
-        throw new Error(`No workspace found for task/path ${id}`);
+        throw new Error(`No worktree found for task/path ${id}`);
       }
 
-      await autoCommitManager.disableAutoCommit(workspace.worktreePath);
-      await workspaceManager.archiveWorkspaceByPathOrTaskId(id);
+      await autoCommitManager.disableAutoCommit(worktree.worktreePath);
+      await worktreeManager.archiveWorktreeByPathOrTaskId(id);
 
       // Check for pending changes
       const hasPendingChanges = await gitHasPendingChanges({
-        cwd: workspace.worktreePath,
+        cwd: worktree.worktreePath,
       });
 
       let worktreeRemoved = false;
@@ -272,24 +272,24 @@ export const archiveWorkspace = {
       // Only remove worktree if no pending changes
       if (!hasPendingChanges) {
         try {
-          await gitWorktreeRemove(workspace.worktreePath);
+          await gitWorktreeRemove(worktree.worktreePath);
           worktreeRemoved = true;
         } catch (error) {
           console.warn(`Failed to remove worktree via git: ${error}`);
           // If git worktree remove failed, try manual directory removal as fallback
           try {
             const fs = await import("fs");
-            if (fs.existsSync(workspace.worktreePath)) {
+            if (fs.existsSync(worktree.worktreePath)) {
               console.info(
-                `Attempting manual directory removal for: ${workspace.worktreePath}`,
+                `Attempting manual directory removal for: ${worktree.worktreePath}`,
               );
-              fs.rmSync(workspace.worktreePath, {
+              fs.rmSync(worktree.worktreePath, {
                 recursive: true,
                 force: true,
               });
               worktreeRemoved = true;
               console.info(
-                `Successfully removed directory manually: ${workspace.worktreePath}`,
+                `Successfully removed directory manually: ${worktree.worktreePath}`,
               );
             }
           } catch (manualError) {
@@ -303,10 +303,10 @@ export const archiveWorkspace = {
         // Remove branch if requested and worktree was removed successfully
         if (has_branch_removal && worktreeRemoved) {
           try {
-            const branchName = workspace.metadata.worktree.branch;
+            const branchName = worktree.metadata.worktree.branch;
             // Try to find the owning repository for branch deletion
             const ownerRepo = await detectWorktreeOwnerRepo(
-              workspace.worktreePath,
+              worktree.worktreePath,
             );
             const branchCwd = ownerRepo || process.cwd();
 
@@ -323,7 +323,7 @@ export const archiveWorkspace = {
 
       const details = [
         "- Auto-commit disabled",
-        '- Workspace metadata updated to "archived" status',
+        '- Worktree metadata updated to "archived" status',
       ];
 
       if (removalBlocked) {
@@ -346,15 +346,15 @@ export const archiveWorkspace = {
         }
       }
 
-      details.push(`- Path: ${workspace.worktreePath}`);
+      details.push(`- Path: ${worktree.worktreePath}`);
 
       return {
         content: [
           {
             type: "text",
             text:
-              `📦 Successfully archived workspace "${workspace.metadata.worktree.name}" (${workspace.metadata.worktree.id})\n\n` +
-              `Workspace has been safely archived. Auto-commit has been disabled and the workspace status updated.\n\n` +
+              `📦 Successfully archived worktree "${worktree.metadata.worktree.name}" (${worktree.metadata.worktree.id})\n\n` +
+              `Worktree has been safely archived. Auto-commit has been disabled and the worktree status updated.\n\n` +
               `Details:\n${details.join("\n")}`,
           },
         ],
@@ -365,14 +365,14 @@ export const archiveWorkspace = {
 
       // Check if this is a missing metadata error
       if (errorMessage.includes("has no metadata")) {
-        return createMissingMetadataResponse("archive the workspace", id);
+        return createMissingMetadataResponse("archive the worktree", id);
       }
 
       return {
         content: [
           {
             type: "text",
-            text: `❌ Failed to archive workspace: ${errorMessage}`,
+            text: `❌ Failed to archive worktree: ${errorMessage}`,
           },
         ],
       };
@@ -381,14 +381,15 @@ export const archiveWorkspace = {
 } satisfies McpTool;
 
 // ============================================================================
-// Tool: Launch Workspace
+// Tool: Launch Worktree
 // ============================================================================
 
-export const launchWorkspace = {
-  name: "launch workspace",
-  description: "Launch a workspace in the editor by task ID or workspace path",
+export const launchWorktree = {
+  name: "go",
+  description: "Open worktree in editor/terminal",
+  aliases: ["go"],
   parameters: (z) => ({
-    workspace_identifier: sharedParameters.workspace_identifier(z),
+    worktree_identifier: sharedParameters.worktree_identifier(z),
     git_repo_path: sharedParameters.git_repo_path_optional(z),
     editor: z
       .string()
@@ -397,14 +398,14 @@ export const launchWorkspace = {
   }),
   cb: async (
     args: Record<string, unknown>,
-    { workspaceManager }: { workspaceManager: WorkspaceManager },
+    { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
     const {
-      workspace_identifier,
+      worktree_identifier,
       git_repo_path,
       editor: editorArg,
     } = args as {
-      workspace_identifier: string;
+      worktree_identifier: string;
       git_repo_path?: string;
       editor?: string;
     };
@@ -415,39 +416,39 @@ export const launchWorkspace = {
         return result;
       }
 
-      // Find the workspace
-      const workspace =
-        await workspaceManager.getWorkspaceByPathOrTaskId(workspace_identifier);
+      // Find the worktree
+      const worktree =
+        await worktreeManager.getWorktreeByPathOrTaskId(worktree_identifier);
 
-      if (!workspace) {
+      if (!worktree) {
         return {
           content: [
             {
               type: "text",
-              text: `❌ **Workspace Not Found**\n\nNo workspace found for identifier: \`${workspace_identifier}\`\n\nUse "list workspaces" to see available workspaces.`,
+              text: `❌ **Worktree Not Found**\n\nNo worktree found for identifier: \`${worktree_identifier}\`\n\nUse "list worktrees" to see available worktrees.`,
             },
           ],
         };
       }
 
       const editor = editorArg || "cursor";
-      const workspacePath = workspace.worktreePath;
-      const workspaceName = workspace.metadata.worktree.name;
+      const worktreePath = worktree.worktreePath;
+      const worktreeName = worktree.metadata.worktree.name;
 
       try {
-        // Launch the editor with the workspace path
-        execSync(`${editor} "${workspacePath}"`, { stdio: "ignore" });
+        // Launch the editor with the worktree path
+        execSync(`${editor} "${worktreePath}"`, { stdio: "ignore" });
 
         return {
           content: [
             {
               type: "text",
               text:
-                `🚀 **Workspace Launched**\n\nSuccessfully launched workspace "${workspaceName}" in ${editor}\n\n` +
-                `• **Task ID:** ${workspace.metadata.worktree.id}\n` +
-                `• **Path:** ${workspacePath}\n` +
-                `• **Branch:** ${workspace.metadata.worktree.branch}\n` +
-                `• **Status:** ${workspace.metadata.worktree.status}`,
+                `🚀 **Worktree Launched**\n\nSuccessfully launched worktree "${worktreeName}" in ${editor}\n\n` +
+                `• **Task ID:** ${worktree.metadata.worktree.id}\n` +
+                `• **Path:** ${worktreePath}\n` +
+                `• **Branch:** ${worktree.metadata.worktree.branch}\n` +
+                `• **Status:** ${worktree.metadata.worktree.status}`,
             },
           ],
         };
@@ -457,12 +458,12 @@ export const launchWorkspace = {
             {
               type: "text",
               text:
-                `⚠️ **Editor Launch Failed**\n\nWorkspace found but failed to launch in ${editor}:\n\`${editorError instanceof Error ? editorError.message : "Unknown error"}\`\n\n` +
-                `**Workspace Details:**\n` +
-                `• **Name:** ${workspaceName}\n` +
-                `• **Path:** ${workspacePath}\n` +
-                `• **Task ID:** ${workspace.metadata.worktree.id}\n\n` +
-                `Try manually opening: \`${editor} "${workspacePath}"\``,
+                `⚠️ **Editor Launch Failed**\n\nWorktree found but failed to launch in ${editor}:\n\`${editorError instanceof Error ? editorError.message : "Unknown error"}\`\n\n` +
+                `**Worktree Details:**\n` +
+                `• **Name:** ${worktreeName}\n` +
+                `• **Path:** ${worktreePath}\n` +
+                `• **Task ID:** ${worktree.metadata.worktree.id}\n\n` +
+                `Try manually opening: \`${editor} "${worktreePath}"\``,
             },
           ],
         };
@@ -473,7 +474,7 @@ export const launchWorkspace = {
         content: [
           {
             type: "text",
-            text: `❌ Failed to launch workspace: ${error instanceof Error ? error.message : "Unknown error"}`,
+            text: `❌ Failed to launch worktree: ${error instanceof Error ? error.message : "Unknown error"}`,
           },
         ],
       };
@@ -482,230 +483,231 @@ export const launchWorkspace = {
 } satisfies McpTool;
 
 // ============================================================================
-// Tool: List Workspaces
+// Tool: List Worktrees (deprecated in favor of list projects)
 // ============================================================================
 
-export const listWorkspaces = {
-  name: "list workspaces",
-  description: "List all workspaces for a git repository",
+// export const listWorktrees = {
+//   name: "list worktrees",
+//   description: "List all worktrees for a git repository",
+//   parameters: (z) => ({
+//     git_repo_path: sharedParameters.git_repo_path_optional(z),
+//   }),
+//   cb: async (
+//     args: Record<string, unknown>,
+//     {}: { worktreeManager: WorktreeManager },
+//   ) => {
+//     const { git_repo_path } = args as { git_repo_path?: string };
+
+//     try {
+//       const result = await assertGitRepoPath(git_repo_path);
+//       if (result) {
+//         return result;
+//       }
+
+//       // Use cwd if not provided
+//       const targetPath = git_repo_path || process.cwd();
+//       const worktrees =
+//         await WorktreeMetadataManager.listAllWorktrees(targetPath);
+
+//       if (worktrees.length === 0) {
+//         return {
+//           content: [
+//             {
+//               type: "text",
+//               text: `📋 **No Worktrees Found**\n\nNo worktrees have been created yet for \`${targetPath}\`.\n\nUse the "create worktree" tool to create your first worktree.`,
+//             },
+//           ],
+//         };
+//       }
+
+//       // Get change statistics for each worktree
+//       const worktreeDetails = await Promise.all(
+//         worktrees.map(async (worktree) => {
+//           const metadata = worktree.metadata;
+
+//           let diffStats = { files: 0, insertions: 0, deletions: 0 };
+//           let uncommittedFiles = 0;
+
+//           // Only get stats for active worktrees
+//           if (metadata?.worktree?.status === "active") {
+//             try {
+//               // Get current working directory changes
+//               const statusOutput = await gitStatus({
+//                 cwd: worktree.worktreePath,
+//               });
+
+//               // Get changes since creation (diff from main branch or base)
+//               try {
+//                 diffStats = await gitDiffStats("main", "HEAD", {
+//                   cwd: worktree.worktreePath,
+//                 });
+//               } catch {
+//                 // Fallback: try diff from origin/main if main doesn't exist locally
+//                 try {
+//                   diffStats = await gitDiffStats("origin/main", "HEAD", {
+//                     cwd: worktree.worktreePath,
+//                   });
+//                 } catch {
+//                   // TODO: Double fallback to check master if main fails
+//                   // If all else fails, get uncommitted changes only
+//                   diffStats = await gitDiffStats(undefined, undefined, {
+//                     cwd: worktree.worktreePath,
+//                   });
+//                 }
+//               }
+
+//               // Count uncommitted changes
+//               uncommittedFiles = statusOutput.trim()
+//                 ? statusOutput.trim().split("\n").length
+//                 : 0;
+//             } catch (error) {
+//               console.warn(
+//                 `Warning: Could not get stats for worktree ${metadata.worktree.name}: ${error}`,
+//               );
+//             }
+//           }
+
+//           return {
+//             ...worktree,
+//             uncommittedFiles,
+//             totalChanges: diffStats,
+//           };
+//         }),
+//       );
+
+//       const worktreeList = worktreeDetails
+//         .map(
+//           (
+//             { totalChanges, uncommittedFiles, metadata, worktreePath },
+//             index,
+//           ) => {
+//             if (!metadata) {
+//               return createMissingMetadataWarning(worktreePath, index);
+//             }
+//             const integrationInfo = "Worktree-only mode";
+
+//             const teamSize = metadata.team.assigned_users.length;
+//             const conversationCount = metadata.conversation_history.length;
+//             const autoCommitStatus = metadata.auto_commit.enabled
+//               ? "✅ Enabled"
+//               : "❌ Disabled";
+
+//             // Format change statistics
+//             const changesText =
+//               totalChanges.files > 0
+//                 ? `${totalChanges.files} files (+${totalChanges.insertions}/-${totalChanges.deletions})`
+//                 : "No changes";
+
+//             const uncommittedText =
+//               uncommittedFiles > 0
+//                 ? ` • **Uncommitted:** ${uncommittedFiles} file${uncommittedFiles !== 1 ? "s" : ""}`
+//                 : "";
+
+//             return (
+//               `**${index + 1}. ${metadata.worktree.name}**\n` +
+//               `   • **Task ID:** ${metadata.worktree.id}\n` +
+//               `   • **Status:** ${metadata.worktree.status}\n` +
+//               `   • **Branch:** ${metadata.worktree.branch}\n` +
+//               `   • **Changes:** ${changesText}${uncommittedText}\n` +
+//               `   • **Path:** ${worktreePath}\n` +
+//               `   • **Created:** ${new Date(metadata.worktree?.created_at ?? "").toLocaleDateString()}\n` +
+//               `   • **Created By:** ${metadata.worktree.created_by}\n` +
+//               `   • **Team Size:** ${teamSize} member${teamSize !== 1 ? "s" : ""}\n` +
+//               `   • **Conversations:** ${conversationCount}\n` +
+//               `   • **Auto-commit:** ${autoCommitStatus}\n` +
+//               `   • **Integration:** ${integrationInfo}\n`
+//             );
+//           },
+//         )
+//         .join("\n");
+
+//       // Calculate totals for active worktrees
+//       const activeWorktrees = worktreeDetails.filter(
+//         (ws) => ws.metadata?.worktree?.status === "active",
+//       );
+//       const totalFiles = activeWorktrees.reduce(
+//         (sum, ws) => sum + ws.totalChanges.files,
+//         0,
+//       );
+//       const totalInsertions = activeWorktrees.reduce(
+//         (sum, ws) => sum + ws.totalChanges.insertions,
+//         0,
+//       );
+//       const totalDeletions = activeWorktrees.reduce(
+//         (sum, ws) => sum + ws.totalChanges.deletions,
+//         0,
+//       );
+//       const totalUncommitted = activeWorktrees.reduce(
+//         (sum, ws) => sum + ws.uncommittedFiles,
+//         0,
+//       );
+
+//       const changesSummary =
+//         totalFiles > 0
+//           ? `**Changes Summary:**\n` +
+//             `• Total files changed: ${totalFiles}\n` +
+//             `• Total insertions: +${totalInsertions}\n` +
+//             `• Total deletions: -${totalDeletions}\n` +
+//             `• Uncommitted files: ${totalUncommitted}\n\n`
+//           : "";
+
+//       const text =
+//         `📋 **All Worktrees (${worktrees.length} total)**\n\n` +
+//         changesSummary +
+//         worktreeList +
+//         `\n💡 Use "get worktree info" with a task ID for detailed information about a specific worktree.`;
+
+//       return {
+//         content: [{ type: "text", text }],
+//       };
+//     } catch (error) {
+//       console.error(error);
+//       return {
+//         content: [
+//           {
+//             type: "text",
+//             text: `❌ Failed to list worktrees: ${error instanceof Error ? error.message : "Unknown error"}`,
+//           },
+//         ],
+//       };
+//     }
+//   },
+// } satisfies McpTool;
+
+// ============================================================================
+// Tool: Get Worktree Info
+// ============================================================================
+
+export const getWorktreeInfo = {
+  name: "info",
+  description: "Get worktree information",
+  aliases: ["info"],
   parameters: (z) => ({
-    git_repo_path: sharedParameters.git_repo_path_optional(z),
+    task_id: z.string().describe("Task ID of the worktree"),
   }),
   cb: async (
     args: Record<string, unknown>,
-    {}: { workspaceManager: WorkspaceManager },
-  ) => {
-    const { git_repo_path } = args as { git_repo_path?: string };
-
-    try {
-      const result = await assertGitRepoPath(git_repo_path);
-      if (result) {
-        return result;
-      }
-
-      // Use cwd if not provided
-      const targetPath = git_repo_path || process.cwd();
-      const workspaces =
-        await WorkspaceMetadataManager.listAllWorkspaces(targetPath);
-
-      if (workspaces.length === 0) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `📋 **No Workspaces Found**\n\nNo workspaces have been created yet for \`${targetPath}\`.\n\nUse the "create workspace" tool to create your first workspace.`,
-            },
-          ],
-        };
-      }
-
-      // Get change statistics for each workspace
-      const workspaceDetails = await Promise.all(
-        workspaces.map(async (workspace) => {
-          const metadata = workspace.metadata;
-
-          let diffStats = { files: 0, insertions: 0, deletions: 0 };
-          let uncommittedFiles = 0;
-
-          // Only get stats for active workspaces
-          if (metadata?.worktree?.status === "active") {
-            try {
-              // Get current working directory changes
-              const statusOutput = await gitStatus({
-                cwd: workspace.worktreePath,
-              });
-
-              // Get changes since creation (diff from main branch or base)
-              try {
-                diffStats = await gitDiffStats("main", "HEAD", {
-                  cwd: workspace.worktreePath,
-                });
-              } catch {
-                // Fallback: try diff from origin/main if main doesn't exist locally
-                try {
-                  diffStats = await gitDiffStats("origin/main", "HEAD", {
-                    cwd: workspace.worktreePath,
-                  });
-                } catch {
-                  // TODO: Double fallback to check master if main fails
-                  // If all else fails, get uncommitted changes only
-                  diffStats = await gitDiffStats(undefined, undefined, {
-                    cwd: workspace.worktreePath,
-                  });
-                }
-              }
-
-              // Count uncommitted changes
-              uncommittedFiles = statusOutput.trim()
-                ? statusOutput.trim().split("\n").length
-                : 0;
-            } catch (error) {
-              console.warn(
-                `Warning: Could not get stats for workspace ${metadata.worktree.name}: ${error}`,
-              );
-            }
-          }
-
-          return {
-            ...workspace,
-            uncommittedFiles,
-            totalChanges: diffStats,
-          };
-        }),
-      );
-
-      const workspaceList = workspaceDetails
-        .map(
-          (
-            { totalChanges, uncommittedFiles, metadata, worktreePath },
-            index,
-          ) => {
-            if (!metadata) {
-              return createMissingMetadataWarning(worktreePath, index);
-            }
-            const integrationInfo = "Workspace-only mode";
-
-            const teamSize = metadata.team.assigned_users.length;
-            const conversationCount = metadata.conversation_history.length;
-            const autoCommitStatus = metadata.auto_commit.enabled
-              ? "✅ Enabled"
-              : "❌ Disabled";
-
-            // Format change statistics
-            const changesText =
-              totalChanges.files > 0
-                ? `${totalChanges.files} files (+${totalChanges.insertions}/-${totalChanges.deletions})`
-                : "No changes";
-
-            const uncommittedText =
-              uncommittedFiles > 0
-                ? ` • **Uncommitted:** ${uncommittedFiles} file${uncommittedFiles !== 1 ? "s" : ""}`
-                : "";
-
-            return (
-              `**${index + 1}. ${metadata.worktree.name}**\n` +
-              `   • **Task ID:** ${metadata.worktree.id}\n` +
-              `   • **Status:** ${metadata.worktree.status}\n` +
-              `   • **Branch:** ${metadata.worktree.branch}\n` +
-              `   • **Changes:** ${changesText}${uncommittedText}\n` +
-              `   • **Path:** ${worktreePath}\n` +
-              `   • **Created:** ${new Date(metadata.worktree?.created_at ?? "").toLocaleDateString()}\n` +
-              `   • **Created By:** ${metadata.worktree.created_by}\n` +
-              `   • **Team Size:** ${teamSize} member${teamSize !== 1 ? "s" : ""}\n` +
-              `   • **Conversations:** ${conversationCount}\n` +
-              `   • **Auto-commit:** ${autoCommitStatus}\n` +
-              `   • **Integration:** ${integrationInfo}\n`
-            );
-          },
-        )
-        .join("\n");
-
-      // Calculate totals for active workspaces
-      const activeWorkspaces = workspaceDetails.filter(
-        (ws) => ws.metadata?.worktree?.status === "active",
-      );
-      const totalFiles = activeWorkspaces.reduce(
-        (sum, ws) => sum + ws.totalChanges.files,
-        0,
-      );
-      const totalInsertions = activeWorkspaces.reduce(
-        (sum, ws) => sum + ws.totalChanges.insertions,
-        0,
-      );
-      const totalDeletions = activeWorkspaces.reduce(
-        (sum, ws) => sum + ws.totalChanges.deletions,
-        0,
-      );
-      const totalUncommitted = activeWorkspaces.reduce(
-        (sum, ws) => sum + ws.uncommittedFiles,
-        0,
-      );
-
-      const changesSummary =
-        totalFiles > 0
-          ? `**Changes Summary:**\n` +
-            `• Total files changed: ${totalFiles}\n` +
-            `• Total insertions: +${totalInsertions}\n` +
-            `• Total deletions: -${totalDeletions}\n` +
-            `• Uncommitted files: ${totalUncommitted}\n\n`
-          : "";
-
-      const text =
-        `📋 **All Workspaces (${workspaces.length} total)**\n\n` +
-        changesSummary +
-        workspaceList +
-        `\n💡 Use "get workspace info" with a task ID for detailed information about a specific workspace.`;
-
-      return {
-        content: [{ type: "text", text }],
-      };
-    } catch (error) {
-      console.error(error);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ Failed to list workspaces: ${error instanceof Error ? error.message : "Unknown error"}`,
-          },
-        ],
-      };
-    }
-  },
-} satisfies McpTool;
-
-// ============================================================================
-// Tool: Get Workspace Info
-// ============================================================================
-
-export const getWorkspaceInfo = {
-  name: "get workspace info",
-  description: "Get information about a workspace by task ID",
-  parameters: (z) => ({
-    task_id: z.string().describe("Task ID of the workspace"),
-  }),
-  cb: async (
-    args: Record<string, unknown>,
-    { workspaceManager }: { workspaceManager: WorkspaceManager },
+    { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
     const { task_id } = args as { task_id: string };
 
     try {
-      const workspace = await workspaceManager.getWorkspaceByTaskId(task_id);
+      const worktree = await worktreeManager.getWorktreeByTaskId(task_id);
 
-      if (!workspace) {
+      if (!worktree) {
         return {
           content: [
             {
               type: "text",
-              text: `❌ No workspace found for task ${task_id}`,
+              text: `❌ No worktree found for task ${task_id}`,
             },
           ],
         };
       }
 
-      const metadata = workspace.metadata;
+      const metadata = worktree.metadata;
       const commitStatus = await autoCommitManager.getCommitQueueStatus(
-        workspace.worktreePath,
+        worktree.worktreePath,
       );
 
       return {
@@ -713,9 +715,9 @@ export const getWorkspaceInfo = {
           {
             type: "text",
             text:
-              `📊 **Workspace Information**\n\n` +
+              `📊 **Worktree Information**\n\n` +
               `**Name:** ${metadata.worktree.name}\n` +
-              `**Path:** ${workspace.worktreePath}\n` +
+              `**Path:** ${worktree.worktreePath}\n` +
               `**Branch:** ${metadata.worktree.branch}\n` +
               `**Base Branch:** ${metadata.git_info.base_branch}\n` +
               `**Status:** ${metadata.worktree.status}\n` +
@@ -734,7 +736,7 @@ export const getWorkspaceInfo = {
         content: [
           {
             type: "text",
-            text: `❌ Failed to get workspace info: ${error instanceof Error ? error.message : "Unknown error"}`,
+            text: `❌ Failed to get worktree info: ${error instanceof Error ? error.message : "Unknown error"}`,
           },
         ],
       };
@@ -743,48 +745,49 @@ export const getWorkspaceInfo = {
 } satisfies McpTool;
 
 // ============================================================================
-// Tool: Initialize Workspace Metadata
+// Tool: Initialize Worktree Metadata
 // ============================================================================
 
-const DEFAULT_TASK_DESCRIPTION = "Legacy workspace";
+const DEFAULT_TASK_DESCRIPTION = "Task";
 
-export const initializeWorkspaceMetadata = {
-  name: "initialize workspace metadata",
-  description: "Initialize metadata for a workspace that doesn't have it",
+export const initializeWorktreeMetadata = {
+  name: "initialize",
+  description: "Initialize metadata for an existing worktree",
+  aliases: ["init"],
   parameters: (z) => ({
-    workspace_path: z
+    worktree_path: z
       .string()
-      .describe("Absolute path to the workspace directory"),
+      .describe("Absolute path to the worktree directory"),
     task_description: z
       .string()
       .default(DEFAULT_TASK_DESCRIPTION)
-      .describe("Description of what this workspace was for"),
+      .describe("Short task description"),
     user_id: sharedParameters.user_id(z),
   }),
   cb: async (args: Record<string, unknown>) => {
-    const { workspace_path, task_description, user_id } = args as {
-      workspace_path: string;
+    const { worktree_path, task_description, user_id } = args as {
+      worktree_path: string;
       task_description?: string;
       user_id?: string;
     };
 
     try {
-      // Check if workspace path exists
+      // Check if worktree path exists
       const fs = await import("fs");
-      if (!fs.existsSync(workspace_path)) {
-        throw new Error(`Workspace path does not exist: ${workspace_path}`);
+      if (!fs.existsSync(worktree_path)) {
+        throw new Error(`Worktree path does not exist: ${worktree_path}`);
       }
 
       // Check if metadata already exists
       try {
         const existing =
-          await WorkspaceMetadataManager.loadMetadata(workspace_path);
+          await WorktreeMetadataManager.loadMetadata(worktree_path);
         if (existing) {
           return {
             content: [
               {
                 type: "text",
-                text: `ℹ️ Workspace already has metadata: ${existing.worktree.name} (${existing.worktree.id})`,
+                text: `ℹ️ Worktree already has metadata: ${existing.worktree.name} (${existing.worktree.id})`,
               },
             ],
           };
@@ -793,14 +796,13 @@ export const initializeWorkspaceMetadata = {
         // No metadata exists, proceed with creation
       }
 
-      // Extract workspace name from path
-      const workspaceName =
-        workspace_path.split("/").pop() || "unknown-workspace";
+      // Extract worktree name from path
+      const worktreeName = worktree_path.split("/").pop() || "unknown-worktree";
 
       // Get current branch
       let currentBranch = "main";
       try {
-        const status = await gitStatus({ cwd: workspace_path });
+        const status = await gitStatus({ cwd: worktree_path });
         // Extract branch from git status if possible
         const branchMatch = status.match(/On branch (.+)/);
         if (branchMatch) {
@@ -811,13 +813,13 @@ export const initializeWorkspaceMetadata = {
       }
 
       // Create metadata
-      const metadata = await WorkspaceMetadataManager.createMetadata(
-        workspace_path,
+      const metadata = await WorktreeMetadataManager.createMetadata(
+        worktree_path,
         {
           task_description: task_description || DEFAULT_TASK_DESCRIPTION,
           user_id: user_id || "unknown",
           base_branch: "main",
-          worktree_name: workspaceName,
+          worktree_name: worktreeName,
           branch: currentBranch,
         },
       );
@@ -827,12 +829,12 @@ export const initializeWorkspaceMetadata = {
           {
             type: "text",
             text:
-              `✅ Successfully initialized metadata for workspace "${workspaceName}"\n\n` +
+              `✅ Successfully initialized metadata for worktree "${worktreeName}"\n\n` +
               `- Task ID: ${metadata.worktree.id}\n` +
               `- Branch: ${currentBranch}\n` +
               `- Description: ${task_description || DEFAULT_TASK_DESCRIPTION}\n` +
               `- Created by: ${user_id || "unknown"}\n\n` +
-              `You can now archive this workspace using its task ID or path.`,
+              `You can now archive this worktree using its task ID or path.`,
           },
         ],
       };
@@ -841,7 +843,7 @@ export const initializeWorkspaceMetadata = {
         content: [
           {
             type: "text",
-            text: `❌ Failed to initialize workspace metadata: ${error instanceof Error ? error.message : "Unknown error"}`,
+            text: `❌ Failed to initialize worktree metadata: ${error instanceof Error ? error.message : "Unknown error"}`,
           },
         ],
       };

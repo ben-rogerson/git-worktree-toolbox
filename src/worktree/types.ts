@@ -1,10 +1,10 @@
 /**
- * Workspace Type Definitions
+ * Worktree Type Definitions
  *
- * Core types for workspace and worktree management:
- * - WorktreeMetadata: Complete workspace metadata structure (worktree info, team, conversations, git info)
- * - CreateWorkspaceOptions: Parameters for creating new workspaces
- * - WorkspaceCreationResult: Result data after workspace creation
+ * Core types for worktree and worktree management:
+ * - WorktreeMetadata: Complete worktree metadata structure (worktree info, team, conversations, git info)
+ * - CreateWorktreeOptions: Parameters for creating new worktrees
+ * - WorktreeCreationResult: Result data after worktree creation
  * - ConversationEntry: Individual conversation/interaction records
  * - AutoCommitInfo: Auto-commit status and statistics
  */
@@ -58,7 +58,7 @@ export interface WorktreeMetadata {
   git_info: GitInfo;
 }
 
-export interface CreateWorkspaceOptions {
+export interface CreateWorktreeOptions {
   task_description: string;
   user_id?: string;
   base_branch?: string;
@@ -66,7 +66,7 @@ export interface CreateWorkspaceOptions {
   git_repo_path?: string;
 }
 
-export interface WorkspaceCreationResult {
+export interface WorktreeCreationResult {
   task_id: string;
   worktree_name: string;
   worktree_path: string;

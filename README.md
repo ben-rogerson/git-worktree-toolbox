@@ -1,33 +1,32 @@
 # 🌳 Git Worktree Toolbox MCP Server (includes CLI)
 
-Gives AI agents the power to spin up isolated git worktrees on demand. Work on multiple features in parallel, each with its own branch and workspace, without the branch-switching chaos.
+Gives AI agents the power to spin up isolated git worktrees on demand. Work on multiple features in parallel, each with its own branch, without stash and branch-switching chaos.
 
-Each task runs in its own sandbox—experiment, break things, pivot strategies—while your main branch stays pristine. Built for AI-assisted workflows where rapid iteration and context switching are the norm.
+Each task runs in its own sandbox—experiment, so you can break things or pivot strategies—while your main branch stays pristine. Built for AI-assisted workflows where rapid iteration and context switching are the norm.
 
 ### Available Tools
 
 **Discovery & Navigation**
 
-- `list projects` - Discover git repositories in configured directories
-- `list workspaces` - View all workspaces for a repository
-- `get workspace info` - Get detailed workspace information
+- `list` - List projects and their worktrees
+- `info` - Get detailed worktree information
 
-**Workspace Lifecycle**
+**Worktree Lifecycle**
 
-- `create workspace` - Create isolated worktree for a task
-- `initialize workspace metadata` - Initialize metadata for existing workspace
-- `archive workspace` - Archive completed workspace
-- `launch workspace` - Open workspace in IDE/terminal
+- `new` - Create worktree and matching branch
+- `init` - Initialize metadata for existing worktree
+- `archive` - Archive worktree and matching branch
+- `go` - Open worktree in IDE/terminal
 
 **Change Management**
 
-- `list changes from specific workspace` - Show detailed changes in a workspace
-- `force commit workspace` - Manually trigger commit in workspace
-- `merge workspace changes` - Sync remote changes to local workspace
+- `changes` - Show detailed changes
+- `push` - Commit and push all changes
+- `grab` - Merge changes from another worktree
 
 **Integration**
 
-- `generate mr link` - Generate GitLab/GitHub merge request link
+- `mr` - Supply the MR/PR creation link
 
 ## Get Started
 
@@ -86,13 +85,6 @@ Run the dev server and inspect the MCP connection:
 npm run dev
 npm run inspect
 ```
-
-## Architecture
-
-- **STDIO Transport**: Native stdin/stdout communication for MCP clients
-- **MCP SDK**: Model Context Protocol implementation
-- **Git Worktrees**: Isolated development environments
-- **YAML Metadata**: Distributed workspace configuration
 
 ### Why use a STDIO transport?
 

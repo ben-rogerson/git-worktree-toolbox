@@ -1,8 +1,8 @@
 /**
  * Auto-Commit System - Automatic git commit management
  *
- * This module provides comprehensive auto-commit functionality for workspace management:
- * - Enable/disable auto-commit for workspaces
+ * This module provides comprehensive auto-commit functionality for worktree management:
+ * - Enable/disable auto-commit for worktrees
  * - Force commits with customizable options
  * - Commit queue status tracking and monitoring
  * - File change tracking and counting
@@ -10,8 +10,8 @@
  * - Metadata integration for persistent state management
  */
 
-import { WorkspaceMetadataManager } from "@/src/workspace/metadata";
-import type { AutoCommitInfo } from "@/src/workspace/types";
+import { WorktreeMetadataManager } from "@/src/worktree/metadata";
+import type { AutoCommitInfo } from "@/src/worktree/types";
 import { gitStatus, gitAdd, gitCommit, gitPush } from "@/src/utils/git";
 import { createMissingMetadataError } from "@/src/tools/utils";
 
@@ -72,9 +72,9 @@ export class AutoCommitManager {
   }
 
   async getCommitQueueStatus(worktreePath: string): Promise<CommitQueueStatus> {
-    const metadata = await WorkspaceMetadataManager.loadMetadata(worktreePath);
+    const metadata = await WorktreeMetadataManager.loadMetadata(worktreePath);
 
-    // If no metadata, return default status (workspace needs initialization)
+    // If no metadata, return default status (worktree needs initialization)
     if (!metadata) {
       return {
         last_commit: null,
@@ -214,8 +214,7 @@ export class AutoCommitManager {
 
   private async gitPushChanges(worktreePath: string): Promise<void> {
     try {
-      const metadata =
-        await WorkspaceMetadataManager.loadMetadata(worktreePath);
+      const metadata = await WorktreeMetadataManager.loadMetadata(worktreePath);
       if (!metadata) {
         throw createMissingMetadataError("pushing changes", worktreePath);
       }
@@ -235,7 +234,7 @@ export class AutoCommitManager {
     }>,
   ): Promise<void> {
     try {
-      await WorkspaceMetadataManager.updateAutoCommitStatus(
+      await WorktreeMetadataManager.updateAutoCommitStatus(
         worktreePath,
         updates,
       );
@@ -248,5 +247,5 @@ export class AutoCommitManager {
   }
 }
 
-// Global instance for managing auto-commit across all workspaces
+// Global instance for managing auto-commit across all worktrees
 export const autoCommitManager = new AutoCommitManager();
