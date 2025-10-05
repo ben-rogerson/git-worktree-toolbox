@@ -126,8 +126,8 @@ export const createTaskWorktree = {
 // Tool: Archive Worktree
 // ============================================================================
 export const archiveWorktree = {
-  name: "archive worktree",
-  description: "Archive a worktree",
+  name: "archive",
+  description: "Archive a worktree and its matching branch",
   aliases: ["archive"],
   parameters: (z) => ({
     worktree_identifier: sharedParameters.worktree_identifier(z),
