@@ -60,7 +60,5 @@ export function generateBranchName(taskDescription: string): string {
     minWordLength: 2,
   });
 
-  return `feature/${words.join("-") || "task"}-${Date.now()
-    .toString()
-    .slice(-4)}`;
+  return `${words.join("-") || "task"}-${Date.now().toString().slice(-4)}`;
 }

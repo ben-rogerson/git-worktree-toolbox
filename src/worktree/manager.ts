@@ -21,6 +21,7 @@ import {
   WorktreeMetadata,
 } from "@/src/worktree/types";
 import { WorktreeClaudeConfigGenerator } from "@/src/claude/configGenerator";
+import { ensureWorktreeHasMetadata } from "@/src/tools/worktree-lifecycle";
 
 export interface WorktreeManagerConfig {
   base_worktrees_path?: string;
@@ -104,20 +105,32 @@ export class WorktreeManager {
     worktreePath: string;
     metadata: WorktreeMetadata;
   } | null> {
-    return await WorktreeMetadataManager.getWorktreeByTaskId(
+    const result = await WorktreeMetadataManager.getWorktreeByTaskId(
       taskId,
       path.dirname(this.baseWorktreesPath),
     );
+
+    if (result) {
+      await ensureWorktreeHasMetadata(result.worktreePath);
+    }
+
+    return result;
   }
 
   async getWorktreeByPathOrTaskId(pathOrTaskId: string): Promise<{
     worktreePath: string;
     metadata: WorktreeMetadata;
   } | null> {
-    return await WorktreeMetadataManager.getWorktreeByPathOrTaskId(
+    const result = await WorktreeMetadataManager.getWorktreeByPathOrTaskId(
       pathOrTaskId,
       path.dirname(this.baseWorktreesPath),
     );
+
+    if (result) {
+      await ensureWorktreeHasMetadata(result.worktreePath);
+    }
+
+    return result;
   }
 
   async archiveWorktreeByTaskId(taskId: string): Promise<void> {

@@ -849,6 +849,47 @@ const DEFAULT_TASK_DESCRIPTION = "Task";
 // } satisfies McpTool;
 
 // ============================================================================
+// Helper: Ensure Worktree Has Metadata
+// ============================================================================
+
+/**
+ * Ensures a worktree has metadata. If missing, initializes it.
+ * Called before operations that require metadata.
+ */
+export async function ensureWorktreeHasMetadata(
+  worktreePath: string,
+): Promise<void> {
+  try {
+    // Check if metadata exists
+    const existing = await WorktreeMetadataManager.loadMetadata(worktreePath);
+    if (existing) {
+      return; // Metadata already exists
+    }
+  } catch {
+    // No metadata exists, proceed with creation
+  }
+
+  // Initialize metadata
+  const worktreeName = path.basename(worktreePath);
+
+  // Get current branch
+  let currentBranch = "main";
+  try {
+    currentBranch = await gitCurrentBranch({ cwd: worktreePath });
+  } catch {
+    // Default to main if we can't determine
+  }
+
+  await WorktreeMetadataManager.createMetadata(worktreePath, {
+    task_description: DEFAULT_TASK_DESCRIPTION,
+    user_id: "system",
+    base_branch: "main",
+    worktree_name: worktreeName,
+    branch: currentBranch,
+  });
+}
+
+// ============================================================================
 // Tool: Doctor - Check and fix worktree metadata
 // ============================================================================
 

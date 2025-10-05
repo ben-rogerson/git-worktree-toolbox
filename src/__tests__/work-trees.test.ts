@@ -36,7 +36,7 @@ const MOCK_WORK_TREE: WorkTree = {
 };
 
 const TEST_BRANCH_NAMES = {
-  VALID: "feature/new-feature",
+  VALID: "new-feature",
   INVALID: "invalid..branch",
   EXISTING: "existing-branch",
 };
@@ -121,10 +121,10 @@ describe("Work Trees", () => {
 
           mockPromisify.mockReturnValue(mockExecAsync);
 
-          const result = await createWorkTree("test-worktree", "feature/test");
+          const result = await createWorkTree("test-worktree", "test");
 
           expect(result.name).toBe("test-worktree");
-          expect(result.branch).toBe("feature/test");
+          expect(result.branch).toBe("test");
           expect(result.id).toBe("test-uuid-123");
           expect(result.path).toContain("test-worktree");
         });

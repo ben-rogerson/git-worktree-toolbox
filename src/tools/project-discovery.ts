@@ -9,6 +9,8 @@ import * as os from "os";
 import { autoCommitManager } from "@/src/worktree/auto-commit";
 import type { McpTool } from "@/src/tools/types";
 import type { WorktreeManager } from "@/src/worktree/manager";
+import { WorktreeMetadataManager } from "@/src/worktree/metadata";
+import { ensureWorktreeHasMetadata } from "./worktree-lifecycle";
 
 // ============================================================================
 // Types
@@ -217,6 +219,24 @@ export const listProjects = {
 
       const projects = discoverProjects(configuredDirectories);
       const scannedDirs = getScannedDirectories(configuredDirectories);
+
+      // Ensure all worktrees in discovered projects have metadata
+      for (const project of projects) {
+        if (project.hasWorktrees) {
+          try {
+            const worktrees =
+              await WorktreeMetadataManager.listAllWorktrees(project.path);
+            for (const worktree of worktrees) {
+              await ensureWorktreeHasMetadata(worktree.worktreePath);
+            }
+          } catch (error) {
+            console.warn(
+              `Failed to ensure metadata for worktrees in ${project.name}:`,
+              error,
+            );
+          }
+        }
+      }
 
       if (projects.length === 0) {
         return {
