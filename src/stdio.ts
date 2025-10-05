@@ -97,7 +97,7 @@ const TOOL_ALIASES: Record<string, string> = {
   init: "initialize workspace metadata",
   changes: "list changes from specific workspace",
   commit: "force commit workspace",
-  merge: "merge remote workspace changes into local",
+  merge: "merge workspace changes",
   projects: "list projects",
   mr: "generate mr link",
 };

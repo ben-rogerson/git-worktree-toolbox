@@ -23,7 +23,7 @@ Each task runs in its own sandboxâ€”experiment, break things, pivot strategiesâ€
 
 - `list changes from specific workspace` - Show detailed changes in a workspace
 - `force commit workspace` - Manually trigger commit in workspace
-- `merge remote workspace changes into local` - Sync remote changes to local workspace
+- `merge workspace changes` - Sync remote changes to local workspace
 
 **Integration**
 

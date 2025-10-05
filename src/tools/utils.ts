@@ -97,19 +97,11 @@ export interface MissingMetadataResponse {
 export const assertGitRepoPath = async (
   git_repo_path?: string,
 ): Promise<ValidationError | null> => {
-  if (!git_repo_path) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: "❌ Git repository path is required",
-        },
-      ],
-    };
-  }
+  // Default to current working directory if not provided
+  const targetPath = git_repo_path || process.cwd();
 
   // Resolve to absolute path
-  const resolvedPath = path.resolve(git_repo_path);
+  const resolvedPath = path.resolve(targetPath);
 
   // Check if path exists
   try {

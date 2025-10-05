@@ -389,7 +389,7 @@ export const launchWorkspace = {
   description: "Launch a workspace in the editor by task ID or workspace path",
   parameters: (z) => ({
     workspace_identifier: sharedParameters.workspace_identifier(z),
-    git_repo_path: sharedParameters.git_repo_path(z),
+    git_repo_path: sharedParameters.git_repo_path_optional(z),
     editor: z
       .string()
       .optional()
@@ -405,7 +405,7 @@ export const launchWorkspace = {
       editor: editorArg,
     } = args as {
       workspace_identifier: string;
-      git_repo_path: string;
+      git_repo_path?: string;
       editor?: string;
     };
 
@@ -489,13 +489,13 @@ export const listWorkspaces = {
   name: "list workspaces",
   description: "List all workspaces for a git repository",
   parameters: (z) => ({
-    git_repo_path: sharedParameters.git_repo_path(z),
+    git_repo_path: sharedParameters.git_repo_path_optional(z),
   }),
   cb: async (
     args: Record<string, unknown>,
     {}: { workspaceManager: WorkspaceManager },
   ) => {
-    const { git_repo_path } = args as { git_repo_path: string };
+    const { git_repo_path } = args as { git_repo_path?: string };
 
     try {
       const result = await assertGitRepoPath(git_repo_path);
@@ -503,15 +503,17 @@ export const listWorkspaces = {
         return result;
       }
 
+      // Use cwd if not provided
+      const targetPath = git_repo_path || process.cwd();
       const workspaces =
-        await WorkspaceMetadataManager.listAllWorkspaces(git_repo_path);
+        await WorkspaceMetadataManager.listAllWorkspaces(targetPath);
 
       if (workspaces.length === 0) {
         return {
           content: [
             {
               type: "text",
-              text: `📋 **No Workspaces Found**\n\nNo workspaces have been created yet for \`${git_repo_path}\`.\n\nUse the "create workspace" tool to create your first workspace.`,
+              text: `📋 **No Workspaces Found**\n\nNo workspaces have been created yet for \`${targetPath}\`.\n\nUse the "create workspace" tool to create your first workspace.`,
             },
           ],
         };

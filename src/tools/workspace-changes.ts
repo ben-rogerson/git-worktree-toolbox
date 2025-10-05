@@ -249,12 +249,12 @@ export const forceCommitWorkspace = {
 } satisfies McpTool;
 
 export const mergeRemoteWorkspaceChangesIntoLocal = {
-  name: "merge remote workspace changes into local",
+  name: "merge workspace changes",
   description:
     "Merge all changes from another workspace into the current workspace",
   parameters: (z) => ({
     worktree_name: sharedParameters.worktree_name(z),
-    git_repo_path: sharedParameters.git_repo_path(z),
+    git_repo_path: sharedParameters.git_repo_path_optional(z),
     avoid_dry_run: z.boolean().optional().describe("Avoid dry run"),
   }),
   cb: async (
@@ -263,11 +263,12 @@ export const mergeRemoteWorkspaceChangesIntoLocal = {
   ) => {
     const { worktree_name, git_repo_path, avoid_dry_run } = args as {
       worktree_name: string;
-      git_repo_path: string;
+      git_repo_path?: string;
       avoid_dry_run?: boolean;
     };
 
-    const workTrees = await listWorkTrees(git_repo_path);
+    const targetPath = git_repo_path || process.cwd();
+    const workTrees = await listWorkTrees(targetPath);
     const worktreeNameError = await assertWorktreeName(
       workTrees,
       worktree_name,
@@ -281,7 +282,7 @@ export const mergeRemoteWorkspaceChangesIntoLocal = {
     const dryRun = !Boolean(avoid_dry_run);
 
     try {
-      const gitOptions = git_repo_path ? { cwd: git_repo_path } : {};
+      const gitOptions = { cwd: targetPath };
 
       // Get current branch
       const currentBranch = await gitCurrentBranch(gitOptions);
