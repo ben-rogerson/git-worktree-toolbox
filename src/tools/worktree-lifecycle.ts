@@ -17,14 +17,11 @@ import {
   gitDeleteBranch,
   gitCurrentBranch,
   detectWorktreeOwnerRepo,
-  gitStatus,
-  gitDiffStats,
 } from "@/src/utils/git";
 
 import {
   assertGitRepoPath,
   createMissingMetadataResponse,
-  createMissingMetadataWarning,
   sharedParameters,
 } from "./utils";
 
@@ -750,91 +747,237 @@ export const getWorktreeInfo = {
 
 const DEFAULT_TASK_DESCRIPTION = "Task";
 
-export const initializeWorktreeMetadata = {
-  name: "initialize",
-  description: "Initialize metadata for an existing worktree",
-  aliases: ["init"],
+// export const initializeWorktreeMetadata = {
+//   name: "initialize",
+//   description: "Initialize metadata for an existing worktree",
+//   aliases: ["init"],
+//   parameters: (z) => ({
+//     worktree_path: z
+//       .string()
+//       .describe("Absolute path to the worktree directory"),
+//     task_description: z
+//       .string()
+//       .default(DEFAULT_TASK_DESCRIPTION)
+//       .describe("Short task description"),
+//     user_id: sharedParameters.user_id(z),
+//   }),
+//   cb: async (args: Record<string, unknown>) => {
+//     const { worktree_path, task_description, user_id } = args as {
+//       worktree_path: string;
+//       task_description?: string;
+//       user_id?: string;
+//     };
+
+//     try {
+//       // Check if worktree path exists
+//       const fs = await import("fs");
+//       if (!fs.existsSync(worktree_path)) {
+//         throw new Error(`Worktree path does not exist: ${worktree_path}`);
+//       }
+
+//       // Check if metadata already exists
+//       try {
+//         const existing =
+//           await WorktreeMetadataManager.loadMetadata(worktree_path);
+//         if (existing) {
+//           return {
+//             content: [
+//               {
+//                 type: "text",
+//                 text: `ℹ️ Worktree already has metadata: ${existing.worktree.name} (${existing.worktree.id})`,
+//               },
+//             ],
+//           };
+//         }
+//       } catch {
+//         // No metadata exists, proceed with creation
+//       }
+
+//       // Extract worktree name from path
+//       const worktreeName = worktree_path.split("/").pop() || "unknown-worktree";
+
+//       // Get current branch
+//       let currentBranch = "main";
+//       try {
+//         const status = await gitStatus({ cwd: worktree_path });
+//         // Extract branch from git status if possible
+//         const branchMatch = status.match(/On branch (.+)/);
+//         if (branchMatch) {
+//           currentBranch = branchMatch[1];
+//         }
+//       } catch {
+//         // Default to main if we can't determine
+//       }
+
+//       // Create metadata
+//       const metadata = await WorktreeMetadataManager.createMetadata(
+//         worktree_path,
+//         {
+//           task_description: task_description || DEFAULT_TASK_DESCRIPTION,
+//           user_id: user_id || "unknown",
+//           base_branch: "main",
+//           worktree_name: worktreeName,
+//           branch: currentBranch,
+//         },
+//       );
+
+//       return {
+//         content: [
+//           {
+//             type: "text",
+//             text:
+//               `✅ Successfully initialized metadata for worktree "${worktreeName}"\n\n` +
+//               `- Task ID: ${metadata.worktree.id}\n` +
+//               `- Branch: ${currentBranch}\n` +
+//               `- Description: ${task_description || DEFAULT_TASK_DESCRIPTION}\n` +
+//               `- Created by: ${user_id || "unknown"}\n\n` +
+//               `You can now archive this worktree using its task ID or path.`,
+//           },
+//         ],
+//       };
+//     } catch (error) {
+//       return {
+//         content: [
+//           {
+//             type: "text",
+//             text: `❌ Failed to initialize worktree metadata: ${error instanceof Error ? error.message : "Unknown error"}`,
+//           },
+//         ],
+//       };
+//     }
+//   },
+// } satisfies McpTool;
+
+// ============================================================================
+// Tool: Doctor - Check and fix worktree metadata
+// ============================================================================
+
+export const doctorWorktrees = {
+  name: "doctor",
+  description:
+    "Check all worktrees and initialize missing metadata. Run this to ensure all worktrees have proper metadata.",
+  aliases: ["doctor"],
   parameters: (z) => ({
-    worktree_path: z
-      .string()
-      .describe("Absolute path to the worktree directory"),
-    task_description: z
-      .string()
-      .default(DEFAULT_TASK_DESCRIPTION)
-      .describe("Short task description"),
-    user_id: sharedParameters.user_id(z),
+    git_repo_path: sharedParameters.git_repo_path_optional(z),
   }),
-  cb: async (args: Record<string, unknown>) => {
-    const { worktree_path, task_description, user_id } = args as {
-      worktree_path: string;
-      task_description?: string;
-      user_id?: string;
-    };
+  cb: async (
+    args: Record<string, unknown>,
+    {}: { worktreeManager: WorktreeManager },
+  ) => {
+    const { git_repo_path } = args as { git_repo_path?: string };
 
     try {
-      // Check if worktree path exists
-      const fs = await import("fs");
-      if (!fs.existsSync(worktree_path)) {
-        throw new Error(`Worktree path does not exist: ${worktree_path}`);
+      const result = await assertGitRepoPath(git_repo_path);
+      if (result) {
+        return result;
       }
 
-      // Check if metadata already exists
-      try {
-        const existing =
-          await WorktreeMetadataManager.loadMetadata(worktree_path);
-        if (existing) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `ℹ️ Worktree already has metadata: ${existing.worktree.name} (${existing.worktree.id})`,
-              },
-            ],
-          };
+      const targetPath = git_repo_path || process.cwd();
+      const worktrees =
+        await WorktreeMetadataManager.listAllWorktrees(targetPath);
+
+      if (worktrees.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `📋 **No Worktrees Found**\n\nNo git worktrees found for \`${targetPath}\`.`,
+            },
+          ],
+        };
+      }
+
+      const missingMetadata: Array<{ path: string; name: string }> = [];
+      const existingMetadata: Array<{
+        path: string;
+        name: string;
+        id: string;
+      }> = [];
+
+      for (const worktree of worktrees) {
+        const worktreeName = path.basename(worktree.worktreePath);
+
+        if (!worktree.metadata) {
+          missingMetadata.push({
+            path: worktree.worktreePath,
+            name: worktreeName,
+          });
+        } else {
+          existingMetadata.push({
+            path: worktree.worktreePath,
+            name: worktreeName,
+            id: worktree.metadata.worktree.id,
+          });
         }
-      } catch {
-        // No metadata exists, proceed with creation
       }
 
-      // Extract worktree name from path
-      const worktreeName = worktree_path.split("/").pop() || "unknown-worktree";
+      // Initialize metadata for worktrees that don't have it
+      const initialized: Array<{ name: string; id: string }> = [];
 
-      // Get current branch
-      let currentBranch = "main";
-      try {
-        const status = await gitStatus({ cwd: worktree_path });
-        // Extract branch from git status if possible
-        const branchMatch = status.match(/On branch (.+)/);
-        if (branchMatch) {
-          currentBranch = branchMatch[1];
+      for (const missing of missingMetadata) {
+        try {
+          // Get current branch
+          let currentBranch = "main";
+          try {
+            currentBranch = await gitCurrentBranch({ cwd: missing.path });
+          } catch {
+            // Default to main if we can't determine
+          }
+
+          const metadata = await WorktreeMetadataManager.createMetadata(
+            missing.path,
+            {
+              task_description: DEFAULT_TASK_DESCRIPTION,
+              user_id: "system",
+              base_branch: "main",
+              worktree_name: missing.name,
+              branch: currentBranch,
+            },
+          );
+
+          initialized.push({
+            name: missing.name,
+            id: metadata.worktree.id,
+          });
+        } catch (error) {
+          console.error(`Failed to initialize ${missing.name}:`, error);
         }
-      } catch {
-        // Default to main if we can't determine
       }
 
-      // Create metadata
-      const metadata = await WorktreeMetadataManager.createMetadata(
-        worktree_path,
-        {
-          task_description: task_description || DEFAULT_TASK_DESCRIPTION,
-          user_id: user_id || "unknown",
-          base_branch: "main",
-          worktree_name: worktreeName,
-          branch: currentBranch,
-        },
-      );
+      const summary: string[] = [
+        `📊 **Worktree Health Check Complete**\n`,
+        `**Total worktrees:** ${worktrees.length}`,
+        `**Already tracked:** ${existingMetadata.length}`,
+        `**Missing metadata:** ${missingMetadata.length}`,
+        `**Newly initialized:** ${initialized.length}`,
+      ];
+
+      if (initialized.length > 0) {
+        summary.push(
+          `\n**Initialized worktrees:**`,
+          ...initialized.map((w) => `  • ${w.name} (${w.id})`),
+        );
+      }
+
+      if (missingMetadata.length > initialized.length) {
+        const failed = missingMetadata.length - initialized.length;
+        summary.push(
+          `\n⚠️ **Failed to initialize:** ${failed} worktree${failed !== 1 ? "s" : ""}`,
+        );
+      }
+
+      if (existingMetadata.length > 0) {
+        summary.push(
+          `\n**Existing worktrees:**`,
+          ...existingMetadata.map((w) => `  • ${w.name} (${w.id})`),
+        );
+      }
 
       return {
         content: [
           {
             type: "text",
-            text:
-              `✅ Successfully initialized metadata for worktree "${worktreeName}"\n\n` +
-              `- Task ID: ${metadata.worktree.id}\n` +
-              `- Branch: ${currentBranch}\n` +
-              `- Description: ${task_description || DEFAULT_TASK_DESCRIPTION}\n` +
-              `- Created by: ${user_id || "unknown"}\n\n` +
-              `You can now archive this worktree using its task ID or path.`,
+            text: summary.join("\n"),
           },
         ],
       };
@@ -843,7 +986,7 @@ export const initializeWorktreeMetadata = {
         content: [
           {
             type: "text",
-            text: `❌ Failed to initialize worktree metadata: ${error instanceof Error ? error.message : "Unknown error"}`,
+            text: `❌ Failed to run doctor: ${error instanceof Error ? error.message : "Unknown error"}`,
           },
         ],
       };

@@ -15,7 +15,7 @@ import {
   archiveWorktree,
   launchWorktree,
   getWorktreeInfo,
-  initializeWorktreeMetadata,
+  doctorWorktrees,
 } from "./worktree-lifecycle.js";
 
 // Worktree Changes Tools
@@ -33,32 +33,13 @@ export interface WorktreeMcpToolsConfig {
   project_directories?: string[];
 }
 
-// TODO: Get these from the tools/index.ts file
-const TOOL_ALIASES: Record<string, string> = {
-  // Discovery & Navigation
-  list: "list projects and their worktrees",
-  info: "get worktree info",
-  // Worktree Lifecycle
-  new: "create task worktree",
-  create: "create task worktree",
-  init: "initialize worktree metadata",
-  archive: "archive worktree",
-  go: "open worktree in IDE/terminal",
-  // Change Management
-  changes: "list changes",
-  push: "commit and push all changes",
-  grab: "merge changes from another worktree",
-  // Integration
-  mr: "generate mr link",
-};
-
 export const tools = [
   // Discovery & Navigation
   listProjects,
   getWorktreeInfo,
   // Worktree Lifecycle
   createTaskWorktree,
-  initializeWorktreeMetadata,
+  doctorWorktrees,
   archiveWorktree,
   generateMrLink,
   // Change Management
