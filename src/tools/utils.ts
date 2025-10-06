@@ -224,9 +224,8 @@ export const createMissingMetadataResponse = (
       {
         type: "text",
         text:
-          `❌ Failed to ${context}: **${worktreeIdentifier}** has no metadata\n\n` +
-          `💡 **Solution**: Initialize metadata first using:\n` +
-          `"initialize worktree metadata" with worktree_path: "${worktreePath}"\n\n` +
+          `❌ Failed to ${context}: ${worktreeIdentifier} has no metadata\n\n` +
+          `💡 Solution: Run the "doctor" tool to initialize metadata for all worktrees.\n\n` +
           `This will create the necessary metadata so you can then ${context}.`,
       },
     ],
@@ -242,7 +241,7 @@ export const createMissingMetadataError = (
 ): Error => {
   return new Error(
     `No metadata found for worktree at ${worktreePath}. ` +
-      `Initialize metadata using "initialize worktree metadata" tool first before ${context}.`,
+      `Run the "doctor" tool first to initialize metadata before ${context}.`,
   );
 };
 
@@ -255,12 +254,12 @@ export const createMissingMetadataWarning = (
 ): string => {
   const prefix =
     index !== undefined
-      ? `**${index + 1}. ${worktreePath}**`
-      : `**${worktreePath}**`;
+      ? `${index + 1}. ${worktreePath}`
+      : `${worktreePath}`;
 
   return (
     `${prefix}\n` +
     `  ⚠️ This git dir requires setup (No metadata found)\n` +
-    `  💡 **Fix**: Use "initialize worktree metadata" with worktree_path: "${worktreePath}"\n`
+    `  💡 Fix: Run the "doctor" tool to initialize metadata\n`
   );
 };

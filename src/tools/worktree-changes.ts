@@ -201,25 +201,25 @@ export const worktreeChanges = {
           {
             type: "text",
             text:
-              `📊 **Worktree Changes: ${metadata.worktree.name}**\n\n` +
-              `**Basic Info:**\n` +
-              `• **Task ID:** ${metadata.worktree.id}\n` +
-              `• **Status:** ${metadata.worktree.status}\n` +
-              `• **Branch:** ${currentBranch}\n` +
-              `• **Base Branch:** ${metadata.git_info.base_branch}\n` +
-              `• **Path:** ${targetWorktreePath}\n` +
-              `• **Created:** ${new Date(metadata.worktree?.created_at ?? "").toLocaleDateString()}\n` +
-              `• **Created By:** ${metadata.worktree.created_by}\n` +
-              `• **Team Size:** ${teamSize} member${teamSize !== 1 ? "s" : ""}\n` +
-              `• **Conversations:** ${conversationCount}\n` +
-              `• **Auto-commit:** ${autoCommitStatus}\n` +
-              `• **Integration:** ${integrationInfo}\n\n` +
-              `**Git Changes:**\n` +
-              `• **Committed Changes:** ${committedText}\n` +
-              `• **Uncommitted Changes:** ${uncommittedChanges.length} file${uncommittedChanges.length !== 1 ? "s" : ""}\n` +
-              `• **Pending Changes:** ${commitStatus.pending_changes}\n` +
-              `• **Last Commit:** ${commitStatus.last_commit?.toISOString() || "None"}\n\n` +
-              `**Uncommitted Files:**\n${uncommittedText}` +
+              `📊 Worktree Changes: ${metadata.worktree.name}\n\n` +
+              `Basic Info:\n` +
+              `• Task ID: ${metadata.worktree.id}\n` +
+              `• Status: ${metadata.worktree.status}\n` +
+              `• Branch: ${currentBranch}\n` +
+              `• Base Branch: ${metadata.git_info.base_branch}\n` +
+              `• Path: ${targetWorktreePath}\n` +
+              `• Created: ${new Date(metadata.worktree?.created_at ?? "").toLocaleDateString()}\n` +
+              `• Created By: ${metadata.worktree.created_by}\n` +
+              `• Team Size: ${teamSize} member${teamSize !== 1 ? "s" : ""}\n` +
+              `• Conversations: ${conversationCount}\n` +
+              `• Auto-commit: ${autoCommitStatus}\n` +
+              `• Integration: ${integrationInfo}\n\n` +
+              `Git Changes:\n` +
+              `• Committed Changes: ${committedText}\n` +
+              `• Uncommitted Changes: ${uncommittedChanges.length} file${uncommittedChanges.length !== 1 ? "s" : ""}\n` +
+              `• Pending Changes: ${commitStatus.pending_changes}\n` +
+              `• Last Commit: ${commitStatus.last_commit?.toISOString() || "None"}\n\n` +
+              `Uncommitted Files:\n${uncommittedText}` +
               pushMessage,
           },
         ],
@@ -325,10 +325,10 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
             {
               type: "text" as const,
               text:
-                `❌ **Merge Conflicts Detected**\n\n` +
+                `❌ Merge Conflicts Detected\n\n` +
                 `Cannot bring changes from worktree '${worktree_name}' (${targetWorkTree.branch}) due to conflicts:\n\n` +
-                `**Conflicting files:**\n${dryRunResult.conflictFiles.map((file) => `• ${file}`).join("\n")}\n\n` +
-                `**Resolution options:**\n` +
+                `Conflicting files:\n${dryRunResult.conflictFiles.map((file) => `• ${file}`).join("\n")}\n\n` +
+                `Resolution options:\n` +
                 `• Manually resolve conflicts in the target worktree\n` +
                 `• Use selective cherry-picking instead\n` +
                 `• Rebase the target branch`,
@@ -352,17 +352,17 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
 
         const filesText =
           changedFiles.length > 0
-            ? `\n\n**Files to be changed (${changedFiles.length}):**\n${changedFiles.map((file) => `• ${file}`).join("\n")}`
-            : "\n\n**No files to change.**";
+            ? `\n\nFiles to be changed (${changedFiles.length}):\n${changedFiles.map((file) => `• ${file}`).join("\n")}`
+            : "\n\nNo files to change.";
 
         return {
           content: [
             {
               type: "text" as const,
               text:
-                `✅ **Dry Run Successful**\n\n` +
+                `✅ Dry Run Successful\n\n` +
                 `Files from worktree '${worktree_name}' (${targetWorkTree.branch}) can be safely copied to '${currentBranch}'.\n\n` +
-                `**Copy details:**\n` +
+                `Copy details:\n` +
                 `• Source: ${targetWorkTree.branch}\n` +
                 `• Target: ${currentBranch}\n` +
                 `• No conflicts detected` +
@@ -391,19 +391,19 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
 
         const filesText =
           changedFiles.length > 0
-            ? `\n\n**Files changed (${changedFiles.length}):**\n${changedFiles.map((file) => `• ${file}`).join("\n")}`
-            : "\n\n**No files were changed.**";
+            ? `\n\nFiles changed (${changedFiles.length}):\n${changedFiles.map((file) => `• ${file}`).join("\n")}`
+            : "\n\nNo files were changed.";
 
         return {
           content: [
             {
               type: "text" as const,
               text:
-                `✅ **Files Copied Successfully**\n\n` +
+                `✅ Files Copied Successfully\n\n` +
                 `All files from worktree '${worktree_name}' (${targetWorkTree.branch}) have been copied to '${currentBranch}'.\n\n` +
-                `**Operation:** File copy (no history preserved)\n` +
-                `**Source:** ${targetWorkTree.branch}\n` +
-                `**Target:** ${currentBranch}` +
+                `Operation: File copy (no history preserved)\n` +
+                `Source: ${targetWorkTree.branch}\n` +
+                `Target: ${currentBranch}` +
                 filesText +
                 `\n\nThe files are now in your working directory. Review and commit as needed.`,
             },

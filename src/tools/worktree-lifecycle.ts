@@ -93,12 +93,12 @@ export const createTaskWorktree = {
             type: "text",
             text:
               `✅ Worktree created successfully!\n\n` +
-              `**Task ID:** ${wsResult.task_id}\n` +
-              `**Integration:** Worktree-only mode\n` +
-              `**Worktree:** ${wsResult.worktree_name}\n` +
-              `**Path:** ${wsResult.worktree_path}\n` +
-              `**Auto-commit:** Enabled\n` +
-              `**Metadata:** ${wsResult.metadata_path}`,
+              `Task ID: ${wsResult.task_id}\n` +
+              `Integration: Worktree-only mode\n` +
+              `Worktree: ${wsResult.worktree_name}\n` +
+              `Path: ${wsResult.worktree_path}\n` +
+              `Auto-commit: Enabled\n` +
+              `Metadata: ${wsResult.metadata_path}`,
           },
         ],
       };
@@ -110,7 +110,7 @@ export const createTaskWorktree = {
       // Provide specific guidance for common errors
       if (errorMessage.includes("WorkTreeError")) {
         userFriendlyMessage =
-          `❌ **Git Worktree Error**\n\n` +
+          `❌ Git Worktree Error\n\n` +
           `Failed to create git worktree. Common causes:\n` +
           `• Base branch doesn't exist\n` +
           `• Insufficient git permissions\n` +
@@ -456,7 +456,7 @@ export const launchWorktree = {
           content: [
             {
               type: "text",
-              text: `❌ **Worktree Not Found**\n\nNo worktree found for identifier: \`${worktree_identifier}\`\n\nUse "list worktrees" to see available worktrees.`,
+              text: `❌ Worktree Not Found\n\nNo worktree found for identifier: \`${worktree_identifier}\`\n\nUse the "list" tool to see available projects and their worktrees.`,
             },
           ],
         };
@@ -475,11 +475,11 @@ export const launchWorktree = {
             {
               type: "text",
               text:
-                `🚀 **Worktree Launched**\n\nSuccessfully launched worktree "${worktreeName}" in ${editor}\n\n` +
-                `• **Task ID:** ${worktree.metadata.worktree.id}\n` +
-                `• **Path:** ${worktreePath}\n` +
-                `• **Branch:** ${worktree.metadata.worktree.branch}\n` +
-                `• **Status:** ${worktree.metadata.worktree.status}`,
+                `🚀 Worktree Launched\n\nSuccessfully launched worktree "${worktreeName}" in ${editor}\n\n` +
+                `• Task ID: ${worktree.metadata.worktree.id}\n` +
+                `• Path: ${worktreePath}\n` +
+                `• Branch: ${worktree.metadata.worktree.branch}\n` +
+                `• Status: ${worktree.metadata.worktree.status}`,
             },
           ],
         };
@@ -489,11 +489,11 @@ export const launchWorktree = {
             {
               type: "text",
               text:
-                `⚠️ **Editor Launch Failed**\n\nWorktree found but failed to launch in ${editor}:\n\`${editorError instanceof Error ? editorError.message : "Unknown error"}\`\n\n` +
-                `**Worktree Details:**\n` +
-                `• **Name:** ${worktreeName}\n` +
-                `• **Path:** ${worktreePath}\n` +
-                `• **Task ID:** ${worktree.metadata.worktree.id}\n\n` +
+                `⚠️ Editor Launch Failed\n\nWorktree found but failed to launch in ${editor}:\n\`${editorError instanceof Error ? editorError.message : "Unknown error"}\`\n\n` +
+                `Worktree Details:\n` +
+                `• Name: ${worktreeName}\n` +
+                `• Path: ${worktreePath}\n` +
+                `• Task ID: ${worktree.metadata.worktree.id}\n\n` +
                 `Try manually opening: \`${editor} "${worktreePath}"\``,
             },
           ],
@@ -596,7 +596,7 @@ export const doctorWorktrees = {
           content: [
             {
               type: "text",
-              text: `📋 **No Worktrees Found**\n\nNo git worktrees found for \`${targetPath}\`.`,
+              text: `📋 No Worktrees Found\n\nNo git worktrees found for \`${targetPath}\`.`,
             },
           ],
         };
@@ -660,16 +660,16 @@ export const doctorWorktrees = {
       }
 
       const summary: string[] = [
-        `📊 **Worktree Health Check Complete**\n`,
-        `**Total worktrees:** ${worktrees.length}`,
-        `**Already tracked:** ${existingMetadata.length}`,
-        `**Missing metadata:** ${missingMetadata.length}`,
-        `**Newly initialized:** ${initialized.length}`,
+        `📊 Worktree Health Check Complete\n`,
+        `Total worktrees: ${worktrees.length}`,
+        `Already tracked: ${existingMetadata.length}`,
+        `Missing metadata: ${missingMetadata.length}`,
+        `Newly initialized: ${initialized.length}`,
       ];
 
       if (initialized.length > 0) {
         summary.push(
-          `\n**Initialized worktrees:**`,
+          `\nInitialized worktrees:`,
           ...initialized.map((w) => `  • ${w.name} (${w.id})`),
         );
       }
@@ -677,13 +677,13 @@ export const doctorWorktrees = {
       if (missingMetadata.length > initialized.length) {
         const failed = missingMetadata.length - initialized.length;
         summary.push(
-          `\n⚠️ **Failed to initialize:** ${failed} worktree${failed !== 1 ? "s" : ""}`,
+          `\n⚠️ Failed to initialize: ${failed} worktree${failed !== 1 ? "s" : ""}`,
         );
       }
 
       if (existingMetadata.length > 0) {
         summary.push(
-          `\n**Existing worktrees:**`,
+          `\nExisting worktrees:`,
           ...existingMetadata.map((w) => `  • ${w.name} (${w.id})`),
         );
       }

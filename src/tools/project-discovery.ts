@@ -249,7 +249,7 @@ export const listProjects = {
             {
               type: "text",
               text:
-                `📂 **No Projects Found**\n\n` +
+                `📂 No Projects Found\n\n` +
                 `Scanned directories:\n` +
                 scannedDirs.map((dir) => `  • ${dir}`).join("\n") +
                 `\n\nNo git repositories were found in these locations.\n\n` +
@@ -262,31 +262,31 @@ export const listProjects = {
       const projectsWithWorktrees = projects.filter((p) => p.hasWorktrees);
       const projectsWithoutWorktrees = projects.filter((p) => !p.hasWorktrees);
 
-      let text = `📂 **Discovered Projects (${projects.length} total)**\n\n`;
+      let text = `📂 Discovered Projects (${projects.length} total)\n\n`;
 
-      text += `**Scanned directories:**\n`;
+      text += `Scanned directories:\n`;
       text += scannedDirs.map((dir) => `  • ${dir}`).join("\n") + "\n\n";
 
       if (projectsWithWorktrees.length > 0) {
-        text += `**Projects with worktrees (${projectsWithWorktrees.length}):**\n`;
+        text += `Projects with worktrees (${projectsWithWorktrees.length}):\n`;
         for (const project of projectsWithWorktrees) {
-          text += `  ✅ **${project.name}**\n`;
+          text += `  ✅ ${project.name}\n`;
           text += `     • Path: ${project.path}\n`;
         }
         text += "\n";
       }
 
       if (projectsWithoutWorktrees.length > 0) {
-        text += `**Projects without worktrees (${projectsWithoutWorktrees.length}):**\n`;
+        text += `Projects without worktrees (${projectsWithoutWorktrees.length}):\n`;
         for (const project of projectsWithoutWorktrees) {
-          text += `  📦 **${project.name}**\n`;
+          text += `  📦 ${project.name}\n`;
           text += `     • Path: ${project.path}\n`;
         }
         text += "\n";
       }
 
-      text += `💡 Use the "list worktrees" tool with a project path to see existing worktrees.\n`;
-      text += `💡 Use the "create worktree" tool with a project path to create a new worktree.`;
+      text += `💡 Use the "changes" tool to see existing worktrees.\n`;
+      text += `💡 Use the "create" tool to create a new worktree.`;
 
       return {
         content: [{ type: "text", text }],
@@ -334,9 +334,9 @@ export const generateMrLink = {
           {
             type: "text",
             text:
-              `🔀 **Merge Request Ready**\n\n` +
+              `🔀 Merge Request Ready\n\n` +
               `All changes have been automatically committed and pushed.\n\n` +
-              `**Create your MR here:** ${mrLink}`,
+              `Create your MR here: ${mrLink}`,
           },
         ],
       };
