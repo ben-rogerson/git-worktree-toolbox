@@ -2,7 +2,6 @@
 
 import { WorktreeManager } from "@/src/worktree/manager";
 import { WorktreeMetadataManager } from "@/src/worktree/metadata";
-import { autoCommitManager } from "@/src/worktree/auto-commit";
 import type { McpTool } from "@/src/tools/types";
 import {
   gitStatus,
@@ -174,7 +173,6 @@ export const worktreeChanges = {
           for (const wt of worktreesToPush) {
             if (!("error" in wt)) {
               try {
-                await autoCommitManager.forceCommit(wt.path);
                 pushedWorktrees.push(wt.name);
               } catch (error) {
                 console.warn(
@@ -401,18 +399,6 @@ export const worktreeChanges = {
 
       const teamSize = metadata.team.assigned_users.length;
       const conversationCount = metadata.conversation_history.length;
-      const autoCommitStatus = metadata.auto_commit.enabled
-        ? "✅ Enabled"
-        : "❌ Disabled";
-
-      // Get commit queue status
-      const commitStatus =
-        await autoCommitManager.getCommitQueueStatus(targetWorktreePath);
-
-      // Handle push if requested
-      if (push_changes) {
-        await autoCommitManager.forceCommit(targetWorktreePath);
-      }
 
       const pushMessage = push_changes
         ? "\n✅ All pending changes have been committed and pushed.\n"
@@ -434,13 +420,10 @@ export const worktreeChanges = {
               `• Created By: ${metadata.worktree.created_by}\n` +
               `• Team Size: ${teamSize} member${teamSize !== 1 ? "s" : ""}\n` +
               `• Conversations: ${conversationCount}\n` +
-              `• Auto-commit: ${autoCommitStatus}\n` +
               `• Integration: ${integrationInfo}\n\n` +
               `Git Changes:\n` +
               `• Committed Changes: ${committedText}\n` +
               `• Uncommitted Changes: ${uncommittedChanges.length} file${uncommittedChanges.length !== 1 ? "s" : ""}\n` +
-              `• Pending Changes: ${commitStatus.pending_changes}\n` +
-              `• Last Commit: ${commitStatus.last_commit?.toISOString() || "None"}\n\n` +
               `Uncommitted Files:\n${uncommittedText}` +
               pushMessage,
           },

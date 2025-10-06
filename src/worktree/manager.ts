@@ -64,7 +64,7 @@ export class WorktreeManager {
         },
       );
 
-      // Step 3: Create Claude configuration with auto-commit hooks
+      // Step 3: Create Claude configuration
       await WorktreeClaudeConfigGenerator.createWorktreeConfig({
         worktreePath: worktree.path,
         worktreeName: worktreeName,
@@ -75,7 +75,7 @@ export class WorktreeManager {
       // Step 4: Add conversation entry
       await WorktreeMetadataManager.addConversationEntry(worktree.path, {
         prompt: options.task_description,
-        response: `Created worktree "${worktreeName}" and auto-commit enabled`,
+        response: `Created worktree "${worktreeName}"`,
       });
 
       return {

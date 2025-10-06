@@ -6,7 +6,6 @@
  * - CreateWorktreeOptions: Parameters for creating new worktrees
  * - WorktreeCreationResult: Result data after worktree creation
  * - ConversationEntry: Individual conversation/interaction records
- * - AutoCommitInfo: Auto-commit status and statistics
  */
 
 export interface WorktreeInfo {
@@ -38,13 +37,6 @@ export interface ConversationEntry {
   commit_hash?: string;
 }
 
-export interface AutoCommitInfo {
-  enabled: boolean;
-  last_commit: string | null;
-  pending_changes: number;
-  queue_size: number;
-}
-
 export interface GitInfo {
   base_branch: string;
   current_branch: string;
@@ -55,7 +47,6 @@ export interface WorktreeMetadata {
   worktree: WorktreeInfo;
   team: TeamInfo;
   conversation_history: ConversationEntry[];
-  auto_commit: AutoCommitInfo;
   git_info: GitInfo;
 }
 
@@ -90,17 +81,4 @@ export interface WorkTreeError extends Error {
     | "GIT_ERROR"
     | "NOT_FOUND"
     | "INVALID_OPERATION";
-}
-
-export interface AutoCommitOptions {
-  commitMessageTemplate?: string;
-  pushToRemote?: boolean;
-}
-
-export interface CommitQueueStatus {
-  last_commit: Date | null;
-  is_processing: boolean;
-  pending_changes: number;
-  queue_size: number;
-  needs_initialization?: boolean;
 }

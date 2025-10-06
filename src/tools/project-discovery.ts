@@ -6,7 +6,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { autoCommitManager } from "@/src/worktree/auto-commit";
 import type { McpTool } from "@/src/tools/types";
 import type { WorktreeManager } from "@/src/worktree/manager";
 import { WorktreeMetadataManager } from "@/src/worktree/metadata";
@@ -420,9 +419,6 @@ export const generateMrLink = {
         };
       }
 
-      // Force commit any pending changes first
-      await autoCommitManager.forceCommit(worktree.worktreePath);
-
       const mrLink =
         await worktreeManager.generateMRLinkByPathOrTaskId(worktree_identifier);
 
@@ -431,9 +427,7 @@ export const generateMrLink = {
           {
             type: "text",
             text:
-              `🔀 Merge Request Ready\n\n` +
-              `All changes have been automatically committed and pushed.\n\n` +
-              `Create your MR here: ${mrLink}`,
+              `🔀 Merge Request Ready\n\n` + `Create your MR here: ${mrLink}`,
           },
         ],
       };

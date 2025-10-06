@@ -4,7 +4,6 @@
  * YAML-based metadata operations for worktree management:
  * - Create/load/save worktree metadata (task.config.yaml)
  * - Conversation history tracking for AI interactions
- * - Auto-commit status tracking (enabled, last commit, pending changes, queue size)
  * - Worktree lookups by ID or path
  * - Team member management (owners, collaborators)
  * - Git information tracking (base branch, current branch)
@@ -60,12 +59,6 @@ const WORKTREE_METADATA_SCHEMA = z.object({
       response: z.string(),
     }),
   ),
-  auto_commit: z.object({
-    enabled: z.boolean(),
-    last_commit: z.string().nullable(),
-    pending_changes: z.number(),
-    queue_size: z.number(),
-  }),
   git_info: z.object({
     base_branch: z.string(),
     current_branch: z.string(),
@@ -129,12 +122,6 @@ export class WorktreeMetadataManager {
         assigned_users: [],
       },
       conversation_history: [],
-      auto_commit: {
-        enabled: true,
-        last_commit: null,
-        pending_changes: 0,
-        queue_size: 0,
-      },
       git_info: {
         base_branch: options.base_branch || "main",
         current_branch: options.branch,
@@ -278,15 +265,6 @@ export class WorktreeMetadataManager {
         });
       }
 
-      // Extract auto-commit info
-      const autoCommitRaw = rawMetadata.auto_commit as any;
-      const autoCommit = {
-        enabled: autoCommitRaw?.enabled ?? true,
-        last_commit: autoCommitRaw?.last_commit || null,
-        pending_changes: autoCommitRaw?.pending_changes ?? 0,
-        queue_size: autoCommitRaw?.queue_size ?? 0,
-      };
-
       // Extract git info
       const gitInfoRaw = rawMetadata.git_info as any;
       const gitInfo = {
@@ -309,7 +287,6 @@ export class WorktreeMetadataManager {
           assigned_users: validTeamMembers,
         },
         conversation_history: conversationHistory,
-        auto_commit: autoCommit,
         git_info: gitInfo,
       };
 
@@ -360,19 +337,6 @@ export class WorktreeMetadataManager {
     };
 
     metadata.conversation_history.push(conversationEntry);
-    await this.saveMetadata(worktreePath, metadata);
-  }
-
-  static async updateAutoCommitStatus(
-    worktreePath: string,
-    updates: Partial<WorktreeMetadata["auto_commit"]>,
-  ): Promise<void> {
-    const metadata = await this.loadMetadata(worktreePath);
-    if (!metadata) {
-      throw new Error(`No metadata found for worktree at ${worktreePath}`);
-    }
-
-    metadata.auto_commit = { ...metadata.auto_commit, ...updates };
     await this.saveMetadata(worktreePath, metadata);
   }
 

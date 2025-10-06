@@ -7,7 +7,6 @@
 import * as path from "path";
 import * as fs from "fs";
 import { execSync } from "child_process";
-import { autoCommitManager } from "@/src/worktree/auto-commit";
 import { WorktreeMetadataManager } from "@/src/worktree/metadata";
 import type { McpTool } from "@/src/tools/types";
 import type { WorktreeManager } from "@/src/worktree/manager";
@@ -93,9 +92,6 @@ export const createTaskWorktree = {
         git_repo_path,
       });
 
-      // Enable auto-commit
-      await autoCommitManager.enableAutoCommit(wsResult.worktree_path);
-
       return {
         content: [
           {
@@ -106,7 +102,6 @@ export const createTaskWorktree = {
               `Integration: Worktree-only mode\n` +
               `Worktree: ${wsResult.worktree_name}\n` +
               `Path: ${wsResult.worktree_path}\n` +
-              `Auto-commit: Enabled\n` +
               `Metadata: ${wsResult.metadata_path}`,
           },
         ],
@@ -190,9 +185,6 @@ export const archiveWorktree = {
       if (!worktree) {
         // Check if the path exists but has no metadata - archive it anyway
         if (path.isAbsolute(id) && fs.existsSync(id)) {
-          // Archive worktree without metadata
-          await autoCommitManager.disableAutoCommit(id);
-
           // Check for pending changes
           const hasPendingChanges = await gitHasPendingChanges({ cwd: id });
 
@@ -252,7 +244,6 @@ export const archiveWorktree = {
 
           const worktreeName = path.basename(id);
           const details = [
-            "- Auto-commit disabled",
             "- No metadata was present (worktree archived as-is)",
           ];
 
@@ -284,7 +275,7 @@ export const archiveWorktree = {
                 type: "text",
                 text:
                   `📦 Successfully archived worktree "${worktreeName}"\n\n` +
-                  `Worktree has been safely archived. Auto-commit has been disabled.\n\n` +
+                  `Worktree has been safely archived.\n\n` +
                   `Details:\n${details.join("\n")}`,
               },
             ],
@@ -293,7 +284,6 @@ export const archiveWorktree = {
         throw new Error(`No worktree found for task/path ${id}`);
       }
 
-      await autoCommitManager.disableAutoCommit(worktree.worktreePath);
       await worktreeManager.archiveWorktreeByPathOrTaskId(id);
 
       // Check for pending changes
@@ -363,10 +353,7 @@ export const archiveWorktree = {
         blockReason = "pending changes detected";
       }
 
-      const details = [
-        "- Auto-commit disabled",
-        '- Worktree metadata updated to "archived" status',
-      ];
+      const details = ['- Worktree metadata updated to "archived" status'];
 
       if (removalBlocked) {
         details.push(`- Worktree preserved (${blockReason})`);
@@ -396,7 +383,7 @@ export const archiveWorktree = {
             type: "text",
             text:
               `📦 Successfully archived worktree "${worktree.metadata.worktree.name}" (${worktree.metadata.worktree.id})\n\n` +
-              `Worktree has been safely archived. Auto-commit has been disabled and the worktree status updated.\n\n` +
+              `Worktree has been safely archived and the worktree status updated.\n\n` +
               `Details:\n${details.join("\n")}`,
           },
         ],

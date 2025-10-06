@@ -31,12 +31,6 @@ describe("WorktreeManager", () => {
       assigned_users: [],
     },
     conversation_history: [],
-    auto_commit: {
-      enabled: true,
-      last_commit: null,
-      pending_changes: 0,
-      queue_size: 0,
-    },
     git_info: {
       base_branch: "main",
       current_branch: "feature-branch",
