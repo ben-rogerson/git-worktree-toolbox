@@ -448,3 +448,11 @@ export async function gitDeleteBranch(
   const command = `git branch${forceFlag} "${branch}"`;
   await executeGitCommand(command, options);
 }
+
+export async function gitCreateInitialCommit(
+  options: GitCommandOptions = {},
+): Promise<void> {
+  // Create an empty commit to initialize the repository
+  const command = 'git commit --allow-empty -m "Initial commit"';
+  await executeGitCommand(command, options);
+}

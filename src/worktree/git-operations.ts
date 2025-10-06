@@ -21,6 +21,7 @@ import {
   gitBranchExists,
   gitCreateBranch,
   gitHasCommits,
+  gitCreateInitialCommit,
 } from "@/src/utils/git";
 import { ensureDirectory } from "@/src/utils/fs";
 import { assertGitRepoPath } from "@/src/tools/utils";
@@ -150,10 +151,8 @@ export async function createWorkTree(
       // Check if repository has any commits
       const hasCommits = await gitHasCommits(gitOptions);
       if (!hasCommits) {
-        throw createWorkTreeError(
-          `Cannot create branch '${branch}' in empty repository. Please make an initial commit first.`,
-          "GIT_ERROR",
-        );
+        // Create an initial commit to allow branch creation
+        await gitCreateInitialCommit(gitOptions);
       }
       await gitCreateBranch(branch, "HEAD", gitOptions);
     }
