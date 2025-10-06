@@ -41,14 +41,13 @@ function getDefaultProjectDirectories(): string[] {
 }
 
 /**
- * Get all directories to scan (default + custom)
+ * Get all directories to scan (override defaults with custom if provided)
  */
 function getScannedDirectories(customDirectories?: string[]): string[] {
-  const defaultDirs = getDefaultProjectDirectories();
   if (!customDirectories || customDirectories.length === 0) {
-    return defaultDirs;
+    return getDefaultProjectDirectories();
   }
-  return [...defaultDirs, ...customDirectories];
+  return customDirectories;
 }
 
 /**
@@ -265,6 +264,13 @@ export const listProjects = {
       }
 
       if (projects.length === 0) {
+        // Check if custom directories are being used
+        const configuredDirectories = worktreeManager.projectDirectories;
+        const tipMessage =
+          configuredDirectories && configuredDirectories.length > 0
+            ? `💡 PROJECT_DIRECTORIES has been set.`
+            : `💡 Customize dirs with this env var:\n\`export PROJECT_DIRECTORIES=~/Users/ben/Projects:~/Users/ben/Work\`.`;
+
         return {
           content: [
             {
@@ -274,7 +280,7 @@ export const listProjects = {
                 `Scanned directories:\n` +
                 scannedDirs.map((dir) => `  • ${dir}`).join("\n") +
                 `\n\nNo git repositories were found in these locations.\n\n` +
-                `💡 Customize the project directories with this env var:\n\`export PROJECT_DIRECTORIES=~/Users/ben/Projects:~/Users/ben/Work\`.`,
+                tipMessage,
             },
           ],
         };
@@ -292,7 +298,14 @@ export const listProjects = {
         text = `📂 Discovered Projects (${projects.length} total)\n\n`;
         text += `Scanned directories:\n`;
         text += scannedDirs.map((dir) => `  • ${dir}`).join("\n") + "\n\n";
-        text += `💡 Customize the project directories with this env var:\n\`export PROJECT_DIRECTORIES=~/Users/ben/Projects:~/Users/ben/Work\`.\n\n`;
+
+        // Check if custom directories are being used
+        const configuredDirectories = worktreeManager.projectDirectories;
+        if (configuredDirectories && configuredDirectories.length > 0) {
+          text += `💡 PROJECT_DIRECTORIES has been set.\n\n`;
+        } else {
+          text += `💡 Customize dirs with this env var:\n\`export PROJECT_DIRECTORIES=~/Users/ben/Projects:~/Users/ben/Work\`.\n\n`;
+        }
       }
 
       if (projectsWithWorktrees.length > 0) {
