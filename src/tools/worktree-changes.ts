@@ -28,7 +28,11 @@ export const worktreeChanges = {
         alias: "i",
         description: "Worktree identifier",
       },
-      { param: "push_changes", alias: "c", description: "Commit and push" },
+      {
+        param: "push_changes",
+        alias: "p",
+        description: "Push any pending changes",
+      },
     ],
   },
   parameters: (z) => ({
@@ -51,8 +55,182 @@ export const worktreeChanges = {
     };
 
     try {
-      // Use current directory if no identifier provided
-      const targetIdentifier = worktree_identifier || process.cwd();
+      // If no identifier provided, show all worktrees
+      if (!worktree_identifier) {
+        const worktrees = await WorktreeMetadataManager.listAllWorktrees(
+          process.cwd(),
+        );
+
+        if (worktrees.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "No worktrees found in the current repository.",
+              },
+            ],
+          };
+        }
+
+        // Identify main worktree by checking current branch
+        const cwd = process.cwd();
+        let mainWorktreePath: string | undefined;
+        for (const wt of worktrees) {
+          try {
+            const branch = await gitCurrentBranch({ cwd: wt.worktreePath });
+            if (branch === "main" || branch === "master") {
+              mainWorktreePath = wt.worktreePath;
+              break;
+            }
+          } catch {
+            // Ignore errors
+          }
+        }
+
+        // Collect changes for each worktree
+        const worktreeChanges = await Promise.all(
+          worktrees.map(async (wt) => {
+            const targetWorktreePath = wt.worktreePath;
+            const metadata = wt.metadata;
+            const isMainTree = targetWorktreePath === mainWorktreePath;
+            const isCwd = targetWorktreePath === cwd;
+
+            if (!metadata) {
+              return {
+                name: targetWorktreePath.split("/").pop() || "unknown",
+                path: targetWorktreePath,
+                error: "No metadata",
+                isMainTree,
+                isCwd,
+              };
+            }
+
+            // Get uncommitted changes count
+            let uncommittedCount = 0;
+            try {
+              const statusOutput = await gitStatus({
+                cwd: targetWorktreePath,
+              });
+              if (statusOutput.trim()) {
+                uncommittedCount = statusOutput.trim().split("\n").length;
+              }
+            } catch {
+              // Ignore errors
+            }
+
+            // Get diff stats for committed changes
+            let diffStats = { files: 0, insertions: 0, deletions: 0 };
+            try {
+              diffStats = await gitDiffStats("main", "HEAD", {
+                cwd: targetWorktreePath,
+              });
+            } catch {
+              try {
+                diffStats = await gitDiffStats("origin/main", "HEAD", {
+                  cwd: targetWorktreePath,
+                });
+              } catch {
+                // No diff stats available
+              }
+            }
+
+            // Get current branch
+            let currentBranch = "unknown";
+            try {
+              currentBranch = await gitCurrentBranch({
+                cwd: targetWorktreePath,
+              });
+            } catch {
+              // Ignore errors
+            }
+
+            return {
+              name: metadata.worktree.name,
+              id: metadata.worktree.id,
+              branch: currentBranch,
+              path: targetWorktreePath,
+              uncommittedCount,
+              committedFiles: diffStats.files,
+              insertions: diffStats.insertions,
+              deletions: diffStats.deletions,
+              status: metadata.worktree.status,
+              isMainTree,
+              isCwd,
+            };
+          }),
+        );
+
+        // Separate cwd, main tree, and other worktrees
+        const cwdTree = worktreeChanges.find((wt) => wt.isCwd);
+        const mainTree = worktreeChanges.find(
+          (wt) => wt.isMainTree && !wt.isCwd,
+        );
+        const otherTrees = worktreeChanges.filter(
+          (wt) => !wt.isMainTree && !wt.isCwd,
+        );
+
+        // Format worktree
+        const formatWorktree = (
+          wt:
+            | (typeof worktreeChanges)[0]
+            | {
+                name: string;
+                error: string;
+                isMainTree: boolean;
+                isCwd: boolean;
+              },
+        ) => {
+          if ("error" in wt) {
+            return `• ${wt.name} - ${wt.error}`;
+          }
+
+          const committedText =
+            wt.committedFiles > 0
+              ? `+${wt.insertions}/-${wt.deletions} in ${wt.committedFiles} files`
+              : "no committed changes";
+          const uncommittedText =
+            wt.uncommittedCount > 0
+              ? `${wt.uncommittedCount} uncommitted`
+              : "no uncommitted changes";
+
+          const labels = [];
+          if (wt.isCwd) labels.push("current");
+          if (wt.isMainTree) labels.push("main tree");
+          const labelSuffix =
+            labels.length > 0 ? ` (${labels.join(", ")})` : "";
+
+          return (
+            `• ${wt.name}${labelSuffix} (${wt.branch})\n` +
+            `  Status: ${wt.status} | ${committedText}, ${uncommittedText}`
+          );
+        };
+
+        const cwdTreeText = cwdTree ? formatWorktree(cwdTree) : "";
+        const mainTreeText = mainTree ? formatWorktree(mainTree) : "";
+        const otherTreesText =
+          otherTrees.length > 0
+            ? otherTrees.map(formatWorktree).join("\n\n")
+            : "";
+
+        const worktreeList = [cwdTreeText, mainTreeText, otherTreesText]
+          .filter(Boolean)
+          .join("\n\n");
+
+        return {
+          content: [
+            {
+              type: "text",
+              text:
+                `📊 All Worktree Changes (${worktreeChanges.length} worktrees)\n\n` +
+                worktreeList +
+                `\n\n💡 Use \`worktree_identifier\` to see detailed changes for a specific worktree.`,
+            },
+          ],
+        };
+      }
+
+      // Show detailed changes for specific worktree
+      const targetIdentifier = worktree_identifier;
       const worktree =
         await worktreeManager.getWorktreeByPathOrTaskId(targetIdentifier);
 
@@ -246,7 +424,11 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
     flags: [
       { param: "worktree_name", alias: "n", description: "Worktree name" },
       { param: "git_repo_path", alias: "p", description: "Git repo path" },
-      { param: "avoid_dry_run", alias: "f", description: "Force (avoid dry run)" },
+      {
+        param: "avoid_dry_run",
+        alias: "f",
+        description: "Force (avoid dry run)",
+      },
     ],
   },
   parameters: (z) => ({

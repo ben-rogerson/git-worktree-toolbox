@@ -317,22 +317,68 @@ export class WorktreeMetadataManager {
     worktreePath: string;
     metadata: WorktreeMetadata;
   } | null> {
+    // Default to current working directory if not provided
+    const identifier = pathOrTaskId || process.cwd();
+
     // First, check if it's a direct path to a worktree
-    if (path.isAbsolute(pathOrTaskId) && fs.existsSync(pathOrTaskId)) {
+    if (path.isAbsolute(identifier) && fs.existsSync(identifier)) {
       try {
-        const metadata = await this.loadMetadata(pathOrTaskId);
+        const metadata = await this.loadMetadata(identifier);
         if (metadata) {
-          return { worktreePath: pathOrTaskId, metadata };
+          return { worktreePath: identifier, metadata };
         }
       } catch (error) {
         // Path exists but no metadata - return null so caller can handle appropriately
-        console.warn(`Worktree at ${pathOrTaskId} exists but has no metadata`);
+        console.warn(`Worktree at ${identifier} exists but has no metadata`);
         return null;
       }
     }
 
-    // If not a valid path, treat as task ID
-    return await this.getWorktreeByTaskId(pathOrTaskId, searchPath);
+    // Try to find by task ID (UUID)
+    const byTaskId = await this.getWorktreeByTaskId(identifier, searchPath);
+    if (byTaskId) {
+      return byTaskId;
+    }
+
+    // Finally, try to find by worktree name
+    if (!fs.existsSync(this.METADATA_ROOT)) {
+      return null;
+    }
+
+    try {
+      const metadataDirs = fs.readdirSync(this.METADATA_ROOT, {
+        withFileTypes: true,
+      });
+
+      for (const dir of metadataDirs) {
+        if (dir.isDirectory()) {
+          const metadataPath = path.join(
+            this.METADATA_ROOT,
+            dir.name,
+            this.METADATA_FILE,
+          );
+
+          if (fs.existsSync(metadataPath)) {
+            try {
+              const yamlContent = fs.readFileSync(metadataPath, "utf8");
+              const metadata = yaml.load(yamlContent) as WorktreeMetadata;
+
+              if (metadata.worktree.name === identifier) {
+                return { worktreePath: metadata.worktree.path, metadata };
+              }
+            } catch (error) {
+              console.warn(
+                `Failed to parse metadata at ${metadataPath}: ${error}`,
+              );
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to scan metadata directory: ${error}`);
+    }
+
+    return null;
   }
 
   static async listAllWorktrees(gitRepoPath?: string): Promise<

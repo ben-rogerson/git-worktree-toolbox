@@ -7,7 +7,9 @@
       "Bash(npm run lint)",
       "Bash(npm run build:*)",
       "Bash(timeout:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git worktree:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": [],

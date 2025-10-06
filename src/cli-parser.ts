@@ -11,36 +11,72 @@ interface ParsedArgs {
 }
 
 /**
+ * Build type map for all parameters in a tool
+ */
+function buildTypeMap(tool: McpTool): Map<string, "string" | "boolean"> {
+  const typeMap = new Map<string, "string" | "boolean">();
+
+  try {
+    // Create mock Zod that captures parameter types
+    const mockZod = {
+      string: () => {
+        const obj = {
+          optional: () => obj,
+          describe: (_desc: string) => obj,
+          _type: "string" as const,
+        };
+        return obj;
+      },
+      boolean: () => {
+        const obj = {
+          optional: () => obj,
+          describe: (_desc: string) => obj,
+          _type: "boolean" as const,
+        };
+        return obj;
+      },
+    };
+
+    const params = tool.parameters(mockZod as never);
+
+    // Extract types from the constructed schema
+    for (const [key, value] of Object.entries(params)) {
+      if (value && typeof value === "object" && "_type" in value) {
+        typeMap.set(key, value._type as "string" | "boolean");
+      }
+    }
+  } catch {
+    // Fallback: use heuristics
+  }
+
+  return typeMap;
+}
+
+/**
  * Determine parameter type from Zod schema
  */
 function getParamType(
-  tool: McpTool,
   paramName: string,
+  typeMap: Map<string, "string" | "boolean">,
 ): "string" | "boolean" {
-  try {
-    const z = { string: () => ({}), boolean: () => ({}), optional: () => ({}) };
-    const params = tool.parameters(z as never);
-    const param = params[paramName];
-
-    if (!param) {
-      return "string";
-    }
-
-    // Simple heuristic: check if the param name or description suggests boolean
-    const paramNameLower = paramName.toLowerCase();
-    if (
-      paramNameLower.startsWith("is_") ||
-      paramNameLower.startsWith("has_") ||
-      paramNameLower.startsWith("avoid_") ||
-      paramNameLower.includes("_changes")
-    ) {
-      return "boolean";
-    }
-
-    return "string";
-  } catch {
-    return "string";
+  // Check if we have the type from schema inspection
+  const schemaType = typeMap.get(paramName);
+  if (schemaType) {
+    return schemaType;
   }
+
+  // Fallback: check parameter name patterns for boolean flags
+  const paramNameLower = paramName.toLowerCase();
+  if (
+    paramNameLower.startsWith("is_") ||
+    paramNameLower.startsWith("has_") ||
+    paramNameLower.startsWith("avoid_") ||
+    paramNameLower.includes("_changes")
+  ) {
+    return "boolean";
+  }
+
+  return "string";
 }
 
 /**
@@ -81,6 +117,7 @@ export async function parseArgs(
 
   // Parse flags for the tool
   const toolArgs: Record<string, unknown> = {};
+  const typeMap = buildTypeMap(tool);
   let i = 1;
 
   while (i < argv.length) {
@@ -105,7 +142,7 @@ export async function parseArgs(
         );
       }
 
-      const paramType = getParamType(tool, flagDef.param);
+      const paramType = getParamType(flagDef.param, typeMap);
 
       if (paramType === "boolean") {
         toolArgs[flagDef.param] = true;
@@ -121,7 +158,7 @@ export async function parseArgs(
     } else {
       // Positional argument - treat as first string flag if none set yet
       const firstStringFlag = tool.cli?.flags?.find((f) => {
-        const type = getParamType(tool, f.param);
+        const type = getParamType(f.param, typeMap);
         return type === "string";
       });
 

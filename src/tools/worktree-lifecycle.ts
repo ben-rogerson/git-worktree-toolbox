@@ -476,6 +476,7 @@ export const launchWorktree = {
               type: "text",
               text:
                 `🚀 Worktree Launched\n\nSuccessfully launched worktree "${worktreeName}" in ${editor}\n\n` +
+                `⏳ Please wait a moment for the editor to open...\n\n` +
                 `• Task ID: ${worktree.metadata.worktree.id}\n` +
                 `• Path: ${worktreePath}\n` +
                 `• Branch: ${worktree.metadata.worktree.branch}\n` +

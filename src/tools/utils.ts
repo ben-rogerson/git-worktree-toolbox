@@ -23,10 +23,15 @@ type ZodNamespace = typeof z;
  */
 export const sharedParameters = {
   /**
-   * Worktree identifier parameter - accepts task ID or absolute path
+   * Worktree identifier parameter - accepts task ID, worktree name, or absolute path
    */
   worktree_identifier: (z: ZodNamespace) =>
-    z.string().describe("Task ID or absolute path to the worktree"),
+    z
+      .string()
+      .optional()
+      .describe(
+        "Task ID, worktree name, or absolute path to the worktree (defaults to current directory)",
+      ),
 
   /**
    * Git repository path parameter
