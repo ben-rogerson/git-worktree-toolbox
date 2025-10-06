@@ -13,8 +13,7 @@ import {
   executeGitCommand,
   gitDiffFileList,
 } from "@/src/utils/git";
-import { listWorkTrees } from "@/src/worktree/git-operations";
-import { assertWorktreeName, sharedParameters } from "./utils";
+import { sharedParameters } from "./utils";
 
 export const worktreeChanges = {
   name: "changes",
@@ -295,7 +294,9 @@ export const worktreeChanges = {
                     return `• ${folderName} (no metadata) - ${ws.worktreePath}`;
                   }
                 })
-                .join("\n")}\n\n💡 You can use worktree name, task ID, or branch name to identify worktrees.`,
+                .join(
+                  "\n",
+                )}\n\n💡 You can use worktree name, task ID, or branch name to identify worktrees.`,
             },
           ],
         };
@@ -465,8 +466,11 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
   cli: {
     aliases: ["grab"],
     flags: [
-      { param: "worktree_name", alias: "n", description: "Worktree name" },
-      { param: "git_repo_path", alias: "p", description: "Git repo path" },
+      {
+        param: "worktree_identifier",
+        alias: "i",
+        description: "Worktree identifier",
+      },
       {
         param: "avoid_dry_run",
         alias: "f",
@@ -475,31 +479,50 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
     ],
   },
   parameters: (z) => ({
-    worktree_name: sharedParameters.worktree_name(z),
-    git_repo_path: sharedParameters.git_repo_path_optional(z),
+    worktree_identifier: sharedParameters.worktree_identifier(z),
     avoid_dry_run: z.boolean().optional().describe("Avoid dry run"),
   }),
   cb: async (
     args: Record<string, unknown>,
-    {}: { worktreeManager: WorktreeManager },
+    { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
-    const { worktree_name, git_repo_path, avoid_dry_run } = args as {
-      worktree_name: string;
-      git_repo_path?: string;
+    const { worktree_identifier, avoid_dry_run } = args as {
+      worktree_identifier?: string;
       avoid_dry_run?: boolean;
     };
 
-    const targetPath = git_repo_path || process.cwd();
-    const workTrees = await listWorkTrees(targetPath);
-    const worktreeNameError = await assertWorktreeName(
-      workTrees,
-      worktree_name,
-    );
-    if (worktreeNameError) {
-      return worktreeNameError;
+    // If no worktree_identifier provided, show error
+    if (!worktree_identifier) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `❌ Worktree identifier is required.\n\nUse the "list" tool to see available projects and their worktrees.`,
+          },
+        ],
+      };
     }
 
-    const targetWorkTree = workTrees.find((wt) => wt.name === worktree_name)!;
+    // Find the worktree using the same method as other tools
+    const worktree =
+      await worktreeManager.getWorktreeByPathOrTaskId(worktree_identifier);
+
+    if (!worktree) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `❌ Worktree Not Found\n\nNo worktree found for identifier: \`${worktree_identifier}\`\n\nUse the "list" tool to see available projects and their worktrees.`,
+          },
+        ],
+      };
+    }
+
+    const targetPath = process.cwd();
+    const targetWorkTree = {
+      name: worktree.metadata.worktree.name,
+      branch: worktree.metadata.worktree.branch,
+    };
 
     const dryRun = !Boolean(avoid_dry_run);
 
@@ -515,7 +538,7 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
           content: [
             {
               type: "text" as const,
-              text: `❌ Cannot bring changes from worktree '${worktree_name}' because you are already on branch '${targetWorkTree.branch}'.\n\nSwitch to a different branch first.`,
+              text: `❌ Cannot bring changes from worktree '${worktree_identifier}' because you are already on branch '${targetWorkTree.branch}'.\n\nSwitch to a different branch first.`,
             },
           ],
         };
@@ -551,7 +574,7 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
               type: "text" as const,
               text:
                 `❌ Merge Conflicts Detected\n\n` +
-                `Cannot bring changes from worktree '${worktree_name}' (${targetWorkTree.branch}) due to conflicts:\n\n` +
+                `Cannot bring changes from worktree '${worktree_identifier}' (${targetWorkTree.branch}) due to conflicts:\n\n` +
                 `Conflicting files:\n${dryRunResult.conflictFiles.map((file) => `• ${file}`).join("\n")}\n\n` +
                 `Resolution options:\n` +
                 `• Manually resolve conflicts in the target worktree\n` +
@@ -586,7 +609,7 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
               type: "text" as const,
               text:
                 `✅ Dry Run Successful\n\n` +
-                `Files from worktree '${worktree_name}' (${targetWorkTree.branch}) can be safely copied to '${currentBranch}'.\n\n` +
+                `Files from worktree '${worktree_identifier}' (${targetWorkTree.branch}) can be safely copied to '${currentBranch}'.\n\n` +
                 `Copy details:\n` +
                 `• Source: ${targetWorkTree.branch}\n` +
                 `• Target: ${currentBranch}\n` +
@@ -625,7 +648,7 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
               type: "text" as const,
               text:
                 `✅ Files Copied Successfully\n\n` +
-                `All files from worktree '${worktree_name}' (${targetWorkTree.branch}) have been copied to '${currentBranch}'.\n\n` +
+                `All files from worktree '${worktree_identifier}' (${targetWorkTree.branch}) have been copied to '${currentBranch}'.\n\n` +
                 `Operation: File copy (no history preserved)\n` +
                 `Source: ${targetWorkTree.branch}\n` +
                 `Target: ${currentBranch}` +

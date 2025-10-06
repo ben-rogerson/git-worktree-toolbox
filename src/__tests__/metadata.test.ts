@@ -50,21 +50,18 @@ describe("WorktreeMetadataManager", () => {
   });
 
   describe("createMetadata", () => {
-    it("should create metadata with user ID", async () => {
+    it("should create metadata with system as creator", async () => {
       const result = await WorktreeMetadataManager.createMetadata(
         testWorktreePath,
         {
           worktree_name: "test",
           branch: "feature",
           task_description: "Test task",
-          user_id: "user123",
         },
       );
 
-      expect(result.worktree.created_by).toBe("user123");
-      expect(result.team.assigned_users).toHaveLength(1);
-      expect(result.team.assigned_users[0].user_id).toBe("user123");
-      expect(result.team.assigned_users[0].role).toBe("owner");
+      expect(result.worktree.created_by).toBe("system");
+      expect(result.team.assigned_users).toHaveLength(0);
     });
 
     it("should handle auto-invite users", async () => {
@@ -74,37 +71,20 @@ describe("WorktreeMetadataManager", () => {
           worktree_name: "test",
           branch: "feature",
           task_description: "Test task",
-          user_id: "owner",
-          auto_invite_users: ["owner", "collaborator1", "collaborator2"],
+          auto_invite_users: ["collaborator1", "collaborator2"],
         },
       );
 
-      expect(result.team.assigned_users).toHaveLength(3);
-      expect(result.team.assigned_users[0].role).toBe("owner");
+      expect(result.team.assigned_users).toHaveLength(2);
+      expect(result.team.assigned_users[0].role).toBe("collaborator");
       expect(result.team.assigned_users[1].role).toBe("collaborator");
-      expect(result.team.assigned_users[2].role).toBe("collaborator");
-    });
-
-    it("should create metadata without user ID", async () => {
-      const result = await WorktreeMetadataManager.createMetadata(
-        testWorktreePath,
-        {
-          worktree_name: "test",
-          branch: "feature",
-          task_description: "Test task",
-        },
-      );
-
-      expect(result.worktree.created_by).toBe("anonymous");
-      expect(result.team.assigned_users).toHaveLength(0);
     });
   });
 
   describe("loadMetadata", () => {
     it("should load valid metadata", async () => {
-      const result = await WorktreeMetadataManager.loadMetadata(
-        testWorktreePath,
-      );
+      const result =
+        await WorktreeMetadataManager.loadMetadata(testWorktreePath);
 
       expect(result).not.toBeNull();
       expect(result?.worktree.id).toBe("test-id");
@@ -113,9 +93,8 @@ describe("WorktreeMetadataManager", () => {
     it("should return null when metadata file doesn't exist", async () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      const result = await WorktreeMetadataManager.loadMetadata(
-        testWorktreePath,
-      );
+      const result =
+        await WorktreeMetadataManager.loadMetadata(testWorktreePath);
 
       expect(result).toBeNull();
     });
@@ -129,9 +108,7 @@ describe("WorktreeMetadataManager", () => {
     });
 
     it("should throw error for invalid schema", async () => {
-      mockFs.readFileSync.mockReturnValue(
-        yaml.dump({ invalid: "structure" }),
-      );
+      mockFs.readFileSync.mockReturnValue(yaml.dump({ invalid: "structure" }));
 
       await expect(
         WorktreeMetadataManager.loadMetadata(testWorktreePath),
@@ -195,9 +172,8 @@ describe("WorktreeMetadataManager", () => {
         { name: "hash1", isDirectory: () => true },
       ] as any);
 
-      const result = await WorktreeMetadataManager.getWorktreeByTaskId(
-        "test-id",
-      );
+      const result =
+        await WorktreeMetadataManager.getWorktreeByTaskId("test-id");
 
       expect(result).not.toBeNull();
       expect(result?.metadata.worktree.id).toBe("test-id");
@@ -209,9 +185,8 @@ describe("WorktreeMetadataManager", () => {
         { name: "hash1", isDirectory: () => true },
       ] as any);
 
-      const result = await WorktreeMetadataManager.getWorktreeByTaskId(
-        "non-existent-id",
-      );
+      const result =
+        await WorktreeMetadataManager.getWorktreeByTaskId("non-existent-id");
 
       expect(result).toBeNull();
     });
@@ -219,9 +194,8 @@ describe("WorktreeMetadataManager", () => {
     it("should return null when metadata root doesn't exist", async () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      const result = await WorktreeMetadataManager.getWorktreeByTaskId(
-        "test-id",
-      );
+      const result =
+        await WorktreeMetadataManager.getWorktreeByTaskId("test-id");
 
       expect(result).toBeNull();
     });
@@ -229,9 +203,10 @@ describe("WorktreeMetadataManager", () => {
 
   describe("getWorktreeByPathOrTaskId", () => {
     it("should find by absolute path", async () => {
-      const result = await WorktreeMetadataManager.getWorktreeByPathOrTaskId(
-        testWorktreePath,
-      );
+      const result =
+        await WorktreeMetadataManager.getWorktreeByPathOrTaskId(
+          testWorktreePath,
+        );
 
       expect(result).not.toBeNull();
       expect(result?.worktreePath).toBe(testWorktreePath);
@@ -245,9 +220,10 @@ describe("WorktreeMetadataManager", () => {
         { name: "hash1", isDirectory: () => true },
       ] as any);
 
-      const result = await WorktreeMetadataManager.getWorktreeByPathOrTaskId(
-        "test-worktree",
-      );
+      const result =
+        await WorktreeMetadataManager.getWorktreeByPathOrTaskId(
+          "test-worktree",
+        );
 
       expect(result).not.toBeNull();
       expect(result?.metadata.worktree.name).toBe("test-worktree");
@@ -262,9 +238,10 @@ describe("WorktreeMetadataManager", () => {
         throw new Error("No metadata");
       });
 
-      const result = await WorktreeMetadataManager.getWorktreeByPathOrTaskId(
-        testWorktreePath,
-      );
+      const result =
+        await WorktreeMetadataManager.getWorktreeByPathOrTaskId(
+          testWorktreePath,
+        );
 
       expect(result).toBeNull();
       expect(consoleWarnSpy).toHaveBeenCalled();
@@ -277,11 +254,10 @@ describe("WorktreeMetadataManager", () => {
       const ensureFn = vi.fn().mockResolvedValue(undefined);
       mockFs.existsSync.mockReturnValue(false);
 
-      const result =
-        await WorktreeMetadataManager.ensureMetadataForWorktrees(
-          ["/path1", "/path2"],
-          ensureFn,
-        );
+      const result = await WorktreeMetadataManager.ensureMetadataForWorktrees(
+        ["/path1", "/path2"],
+        ensureFn,
+      );
 
       expect(result.succeeded).toHaveLength(2);
       expect(result.failed).toHaveLength(0);
@@ -294,11 +270,10 @@ describe("WorktreeMetadataManager", () => {
         .mockRejectedValueOnce(new Error("Failed"));
       mockFs.existsSync.mockReturnValue(false);
 
-      const result =
-        await WorktreeMetadataManager.ensureMetadataForWorktrees(
-          ["/path1", "/path2"],
-          ensureFn,
-        );
+      const result = await WorktreeMetadataManager.ensureMetadataForWorktrees(
+        ["/path1", "/path2"],
+        ensureFn,
+      );
 
       expect(result.succeeded).toHaveLength(1);
       expect(result.failed).toHaveLength(1);

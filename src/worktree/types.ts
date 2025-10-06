@@ -61,7 +61,6 @@ export interface WorktreeMetadata {
 
 export interface CreateWorktreeOptions {
   task_description: string;
-  user_id?: string;
   base_branch?: string;
   auto_invite_users?: string[];
   git_repo_path?: string;

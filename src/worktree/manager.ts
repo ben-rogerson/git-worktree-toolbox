@@ -40,10 +40,7 @@ export class WorktreeManager {
   async createWorktree(
     options: CreateWorktreeOptions,
   ): Promise<WorktreeCreationResult> {
-    const worktreeName = generateWorktreeName(
-      options.task_description,
-      options.user_id,
-    );
+    const worktreeName = generateWorktreeName(options.task_description);
     const branchName = generateBranchName(options.task_description);
 
     try {
@@ -60,7 +57,6 @@ export class WorktreeManager {
         worktree.path,
         {
           task_description: options.task_description,
-          user_id: options.user_id,
           base_branch: options.base_branch,
           auto_invite_users: options.auto_invite_users,
           worktree_name: worktreeName,
@@ -78,7 +74,6 @@ export class WorktreeManager {
 
       // Step 4: Add conversation entry
       await WorktreeMetadataManager.addConversationEntry(worktree.path, {
-        user_id: options.user_id,
         prompt: options.task_description,
         claude_response: `Created worktree "${worktreeName}" and auto-commit enabled`,
       });
@@ -157,6 +152,32 @@ export class WorktreeManager {
         throw new Error("No task ID provided");
       }
       throw new Error(`No worktree found for task ${taskId}`);
+    }
+
+    const metadata = worktree.metadata;
+    const branchName = metadata.worktree.branch;
+    const baseBranch = metadata.git_info.base_branch;
+
+    // This is a placeholder - you would replace with your actual GitLab/GitHub URL
+    const repoUrl =
+      metadata.git_info.remote_url || "https://gitlab.com/your-org/your-repo";
+
+    if (repoUrl.includes("gitlab")) {
+      return `${repoUrl}/-/merge_requests/new?merge_request[source_branch]=${branchName}&merge_request[target_branch]=${baseBranch}`;
+    } else if (repoUrl.includes("github")) {
+      return `${repoUrl}/compare/${baseBranch}...${branchName}`;
+    } else {
+      return `Please create a merge request from branch "${branchName}" to "${baseBranch}"`;
+    }
+  }
+
+  async generateMRLinkByPathOrTaskId(pathOrTaskId: string): Promise<string> {
+    const worktree = await this.getWorktreeByPathOrTaskId(pathOrTaskId);
+    if (!worktree) {
+      if (!pathOrTaskId) {
+        throw new Error("No worktree identifier provided");
+      }
+      throw new Error(`No worktree found for identifier ${pathOrTaskId}`);
     }
 
     const metadata = worktree.metadata;

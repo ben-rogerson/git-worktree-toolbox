@@ -41,7 +41,6 @@ export const createTaskWorktree = {
         description: "Task description",
       },
       { param: "git_repo_path", alias: "p", description: "Git repo path" },
-      { param: "user_id", alias: "u", description: "User ID" },
       { param: "base_branch", alias: "b", description: "Base branch" },
     ],
   },
@@ -50,16 +49,14 @@ export const createTaskWorktree = {
       .string()
       .describe("Description of the task or feature to work on"),
     git_repo_path: sharedParameters.git_repo_path_optional(z),
-    user_id: sharedParameters.user_id(z),
     base_branch: sharedParameters.base_branch(z),
   }),
   cb: async (
     args: Record<string, unknown>,
     { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
-    const { task_description, user_id, base_branch, git_repo_path } = args as {
+    const { task_description, base_branch, git_repo_path } = args as {
       task_description: string;
-      user_id?: string;
       base_branch?: string;
       git_repo_path?: string;
     };
@@ -83,7 +80,6 @@ export const createTaskWorktree = {
     try {
       const wsResult = await worktreeManager.createWorktree({
         task_description,
-        user_id,
         base_branch,
         git_repo_path,
       });
@@ -432,13 +428,11 @@ export const launchWorktree = {
         alias: "i",
         description: "Worktree identifier",
       },
-      { param: "git_repo_path", alias: "p", description: "Git repo path" },
       { param: "editor", alias: "e", description: "Editor to use" },
     ],
   },
   parameters: (z) => ({
     worktree_identifier: sharedParameters.worktree_identifier(z),
-    git_repo_path: sharedParameters.git_repo_path_optional(z),
     editor: z
       .string()
       .optional()
@@ -448,22 +442,12 @@ export const launchWorktree = {
     args: Record<string, unknown>,
     { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
-    const {
-      worktree_identifier,
-      git_repo_path,
-      editor: editorArg,
-    } = args as {
+    const { worktree_identifier, editor: editorArg } = args as {
       worktree_identifier: string;
-      git_repo_path?: string;
       editor?: string;
     };
 
     try {
-      const result = await assertGitRepoPath(git_repo_path);
-      if (result) {
-        return result;
-      }
-
       // Find the worktree
       const worktree =
         await worktreeManager.getWorktreeByPathOrTaskId(worktree_identifier);
@@ -571,7 +555,6 @@ export async function ensureWorktreeHasMetadata(
 
   await WorktreeMetadataManager.createMetadata(worktreePath, {
     task_description: DEFAULT_TASK_DESCRIPTION,
-    user_id: "system",
     base_branch: "main",
     worktree_name: worktreeName,
     branch: currentBranch,
@@ -663,7 +646,6 @@ export const doctorWorktrees = {
             missing.path,
             {
               task_description: DEFAULT_TASK_DESCRIPTION,
-              user_id: "system",
               base_branch: "main",
               worktree_name: missing.name,
               branch: currentBranch,

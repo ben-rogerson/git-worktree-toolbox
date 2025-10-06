@@ -31,15 +31,7 @@ export function extractKeywords(
     .slice(0, maxWords);
 }
 
-export function generateWorktreeName(
-  taskDescription: string,
-  userId?: string,
-): string {
-  // Extract user name from ID (simplified) or use anonymous
-  const userName = userId
-    ? userId.split(".")[0] || userId.substring(0, 8)
-    : "anon";
-
+export function generateWorktreeName(taskDescription: string): string {
   // Extract key words from task description
   const words = extractKeywords(taskDescription);
 
@@ -51,7 +43,7 @@ export function generateWorktreeName(
     taskPart = sanitized.length > 0 ? sanitized.substring(0, 10) : "task";
   }
 
-  return `${taskPart}-${userName}-${Date.now().toString().slice(-4)}`;
+  return `${taskPart}-${Date.now().toString().slice(-4)}`;
 }
 
 export function generateBranchName(taskDescription: string): string {

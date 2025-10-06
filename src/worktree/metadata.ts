@@ -122,25 +122,16 @@ export class WorktreeMetadataManager {
         path: path.resolve(worktreePath),
         branch: options.branch,
         created_at: new Date().toISOString(),
-        created_by: options.user_id || "anonymous",
+        created_by: "system",
         status: "active",
       },
       team: {
-        assigned_users: options.user_id
-          ? [
-              {
-                user_id: options.user_id,
-                role: "owner",
-                joined_at: new Date().toISOString(),
-              },
-            ]
-          : [],
+        assigned_users: [],
       },
       conversation_history: [
         {
           id: uuidv4(),
           timestamp: new Date().toISOString(),
-          user_id: options.user_id || "anonymous",
           prompt: options.task_description,
           claude_response: "Creating worktree for task...",
         },
@@ -160,13 +151,11 @@ export class WorktreeMetadataManager {
     // Add auto-invited users
     if (options.auto_invite_users) {
       for (const userId of options.auto_invite_users) {
-        if (userId !== options.user_id) {
-          metadata.team.assigned_users.push({
-            user_id: userId,
-            role: "collaborator",
-            joined_at: new Date().toISOString(),
-          });
-        }
+        metadata.team.assigned_users.push({
+          user_id: userId,
+          role: "collaborator",
+          joined_at: new Date().toISOString(),
+        });
       }
     }
 

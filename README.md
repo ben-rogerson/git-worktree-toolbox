@@ -43,10 +43,10 @@ gwtree changes -i task-abc123
 gwtree changes -i task-abc123 -c
 
 # Merge changes from another worktree
-gwtree grab -n feature-branch -f
+gwtree grab -i feature-branch -f
 
 # Generate MR link
-gwtree mr -t task-abc123
+gwtree mr -i task-abc123
 
 # List all projects
 gwtree list

@@ -62,15 +62,6 @@ export const sharedParameters = {
     z.string().describe("Name of the worktree"),
 
   /**
-   * User ID parameter
-   */
-  user_id: (z: ZodNamespace) =>
-    z
-      .string()
-      .optional()
-      .describe("User ID (optional for anonymous operations)"),
-
-  /**
    * Base branch parameter
    */
   base_branch: (z: ZodNamespace) =>
@@ -258,9 +249,7 @@ export const createMissingMetadataWarning = (
   index?: number,
 ): string => {
   const prefix =
-    index !== undefined
-      ? `${index + 1}. ${worktreePath}`
-      : `${worktreePath}`;
+    index !== undefined ? `${index + 1}. ${worktreePath}` : `${worktreePath}`;
 
   return (
     `${prefix}\n` +

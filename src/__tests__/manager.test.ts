@@ -70,7 +70,6 @@ describe("WorktreeManager", () => {
     it("should create worktree with all components", async () => {
       const result = await manager.createWorktree({
         task_description: "Implement new feature",
-        user_id: "user123",
         base_branch: "main",
       });
 
@@ -111,7 +110,6 @@ describe("WorktreeManager", () => {
     it("should handle auto-invite users", async () => {
       await manager.createWorktree({
         task_description: "Test",
-        user_id: "owner",
         auto_invite_users: ["user1", "user2"],
       });
 

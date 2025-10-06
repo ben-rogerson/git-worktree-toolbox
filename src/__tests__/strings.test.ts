@@ -72,54 +72,36 @@ describe("String Utilities", () => {
 
   describe("generateWorktreeName", () => {
     it("should include extracted keywords", () => {
-      const name = generateWorktreeName("fix authentication bug", "user123");
+      const name = generateWorktreeName("fix authentication bug");
       expect(name).toContain("fix");
       expect(name).toContain("authentication");
     });
 
-    it("should include user identifier", () => {
-      const name = generateWorktreeName("test task", "john.doe");
-      expect(name).toContain("john");
-    });
-
-    it("should handle user ID without dots", () => {
-      const name = generateWorktreeName("test", "shortid");
-      expect(name).toContain("shortid");
-    });
-
-    it("should truncate long user IDs", () => {
-      const name = generateWorktreeName(
-        "test",
-        "verylonguseridthatexceedslimit",
-      );
-      expect(name).toContain("verylonguseridthatexceedslimit");
-    });
-
-    it("should use 'anon' when no user ID provided", () => {
+    it("should not include user identifier", () => {
       const name = generateWorktreeName("test task");
-      expect(name).toContain("anon");
+      expect(name).not.toContain("john");
+      expect(name).not.toContain("anon");
     });
 
     it("should include timestamp suffix", () => {
-      const name = generateWorktreeName("test", "user");
+      const name = generateWorktreeName("test");
       expect(name).toMatch(/\d{4}$/);
     });
 
     it("should handle empty description", () => {
-      const name = generateWorktreeName("", "user");
+      const name = generateWorktreeName("");
       expect(name).toContain("task");
-      expect(name).toContain("user");
     });
 
     it("should handle description with only special chars", () => {
-      const name = generateWorktreeName("@#$%^&", "user");
+      const name = generateWorktreeName("@#$%^&");
       expect(name).toContain("task");
     });
 
     it("should handle very long descriptions", () => {
       const longDesc =
         "implement a new feature with authentication and authorization for the user management system";
-      const name = generateWorktreeName(longDesc, "user");
+      const name = generateWorktreeName(longDesc);
       expect(name.length).toBeLessThan(100);
     });
   });

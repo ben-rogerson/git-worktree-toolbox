@@ -12,6 +12,7 @@ import type { WorktreeManager } from "@/src/worktree/manager";
 import { WorktreeMetadataManager } from "@/src/worktree/metadata";
 import { ensureWorktreeHasMetadata } from "./worktree-lifecycle";
 import { detectWorktreeOwnerRepo } from "@/src/utils/git";
+import { sharedParameters } from "./utils";
 
 // ============================================================================
 // Types
@@ -367,25 +368,58 @@ export const generateMrLink = {
   description: "Generate a merge request link for a worktree",
   cli: {
     aliases: ["mr"],
-    flags: [{ param: "task_id", alias: "t", description: "Task ID" }],
+    flags: [
+      {
+        param: "worktree_identifier",
+        alias: "i",
+        description: "Worktree identifier",
+      },
+    ],
   },
   parameters: (z) => ({
-    task_id: z.string().describe("Task ID of the worktree"),
+    worktree_identifier: sharedParameters.worktree_identifier(z),
   }),
   cb: async (
     args: Record<string, unknown>,
     { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
-    try {
-      const taskId = args.task_id as string;
+    const { worktree_identifier } = args as {
+      worktree_identifier?: string;
+    };
 
-      // Force commit any pending changes first
-      const worktree = await worktreeManager.getWorktreeByTaskId(taskId);
-      if (worktree) {
-        await autoCommitManager.forceCommit(worktree.worktreePath);
+    // If no worktree_identifier provided, show error
+    if (!worktree_identifier) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `❌ Worktree identifier is required.\n\nUse the "list" tool to see available projects and their worktrees.`,
+          },
+        ],
+      };
+    }
+
+    try {
+      // Find the worktree using the same method as other tools
+      const worktree =
+        await worktreeManager.getWorktreeByPathOrTaskId(worktree_identifier);
+
+      if (!worktree) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `❌ Worktree Not Found\n\nNo worktree found for identifier: \`${worktree_identifier}\`\n\nUse the "list" tool to see available projects and their worktrees.`,
+            },
+          ],
+        };
       }
 
-      const mrLink = await worktreeManager.generateMRLinkByTaskId(taskId);
+      // Force commit any pending changes first
+      await autoCommitManager.forceCommit(worktree.worktreePath);
+
+      const mrLink =
+        await worktreeManager.generateMRLinkByPathOrTaskId(worktree_identifier);
 
       return {
         content: [
