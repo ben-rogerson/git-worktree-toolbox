@@ -172,7 +172,26 @@ export class WorktreeMetadataManager {
       const parsedMetadata = WORKTREE_METADATA_SCHEMA.parse(metadata);
       return parsedMetadata;
     } catch (error) {
-      throw new Error(`Failed to parse metadata at ${metadataPath}: ${error}`);
+      console.warn(
+        `Warning: Could not parse metadata at ${metadataPath}: ${error}`,
+      );
+      console.warn("Attempting to repair corrupted metadata...");
+
+      try {
+        const repairedMetadata = await this.repairMetadata(
+          worktreePath,
+          metadataPath,
+        );
+        if (repairedMetadata) {
+          console.warn("Successfully repaired and saved metadata");
+          return repairedMetadata;
+        }
+      } catch (repairError) {
+        console.warn(`Failed to repair metadata: ${repairError}`);
+      }
+
+      // If repair fails, return null to indicate no valid metadata
+      return null;
     }
   }
 
@@ -191,6 +210,119 @@ export class WorktreeMetadataManager {
       writeFileWithDirectorySync(metadataPath, yamlContent, "utf8");
     } catch (error) {
       throw new Error(`Failed to save metadata to ${metadataPath}: ${error}`);
+    }
+  }
+
+  /**
+   * Repair corrupted metadata by extracting valid data and reconstructing missing parts
+   */
+  static async repairMetadata(
+    worktreePath: string,
+    metadataPath: string,
+  ): Promise<WorktreeMetadata | null> {
+    try {
+      const yamlContent = fs.readFileSync(metadataPath, "utf8");
+      const rawMetadata = yaml.load(yamlContent) as Record<string, unknown>;
+
+      // Extract valid data from the corrupted metadata
+      const worktreeName = path.basename(worktreePath);
+      const worktreeId = (rawMetadata.worktree as any)?.id || uuidv4();
+      const createdBy = (rawMetadata.worktree as any)?.created_by || "system";
+      const createdAt =
+        (rawMetadata.worktree as any)?.created_at || new Date().toISOString();
+      const status = (rawMetadata.worktree as any)?.status || "active";
+
+      // Get current branch
+      let currentBranch = "main";
+      try {
+        const { gitCurrentBranch } = await import("@/src/utils/git");
+        currentBranch = await gitCurrentBranch({ cwd: worktreePath });
+      } catch {
+        // Default to main if we can't determine
+      }
+
+      // Repair conversation history by fixing malformed entries
+      const conversationHistory: ConversationEntry[] = [];
+      const rawConversations =
+        (rawMetadata.conversation_history as any[]) || [];
+
+      for (const rawConv of rawConversations) {
+        if (rawConv && typeof rawConv === "object") {
+          // Fix entries that have claude_response instead of response
+          const response = rawConv.response || rawConv.claude_response || "";
+
+          if (rawConv.id && rawConv.timestamp && rawConv.prompt && response) {
+            conversationHistory.push({
+              id: rawConv.id,
+              timestamp: rawConv.timestamp,
+              user_id: rawConv.user_id,
+              prompt: rawConv.prompt,
+              response: response,
+            });
+          }
+        }
+      }
+
+      // Extract team information
+      const assignedUsers = (rawMetadata.team as any)?.assigned_users || [];
+      const validTeamMembers = assignedUsers.filter(
+        (user: any) => user && user.user_id && user.role && user.joined_at,
+      );
+
+      // If no valid team members, add the creator
+      if (validTeamMembers.length === 0) {
+        validTeamMembers.push({
+          user_id: createdBy,
+          role: "owner",
+          joined_at: createdAt,
+        });
+      }
+
+      // Extract auto-commit info
+      const autoCommitRaw = rawMetadata.auto_commit as any;
+      const autoCommit = {
+        enabled: autoCommitRaw?.enabled ?? true,
+        last_commit: autoCommitRaw?.last_commit || null,
+        pending_changes: autoCommitRaw?.pending_changes ?? 0,
+        queue_size: autoCommitRaw?.queue_size ?? 0,
+      };
+
+      // Extract git info
+      const gitInfoRaw = rawMetadata.git_info as any;
+      const gitInfo = {
+        base_branch: gitInfoRaw?.base_branch || "main",
+        current_branch: currentBranch,
+      };
+
+      // Reconstruct the metadata
+      const repairedMetadata: WorktreeMetadata = {
+        worktree: {
+          id: worktreeId,
+          name: worktreeName,
+          path: worktreePath,
+          branch: currentBranch,
+          created_at: createdAt,
+          created_by: createdBy,
+          status: status,
+        },
+        team: {
+          assigned_users: validTeamMembers,
+        },
+        conversation_history: conversationHistory,
+        auto_commit: autoCommit,
+        git_info: gitInfo,
+      };
+
+      // Validate the repaired metadata
+      const validatedMetadata =
+        WORKTREE_METADATA_SCHEMA.parse(repairedMetadata);
+
+      // Save the repaired metadata
+      await this.saveMetadata(worktreePath, validatedMetadata);
+
+      return validatedMetadata;
+    } catch (error) {
+      throw new Error(`Failed to repair metadata: ${error}`);
     }
   }
 
