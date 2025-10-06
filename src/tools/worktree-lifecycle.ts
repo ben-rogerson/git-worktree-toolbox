@@ -40,8 +40,17 @@ export const createTaskWorktree = {
         alias: "d",
         description: "Task description",
       },
-      { param: "git_repo_path", alias: "p", description: "Git repo path" },
-      { param: "base_branch", alias: "b", description: "Base branch" },
+      {
+        param: "base_branch",
+        alias: "b",
+        description: "Base branch (Optional)",
+      },
+      {
+        param: "git_repo_path",
+        alias: "p",
+        description:
+          "The path to the Git repo (Optional). Defaults to current repository.",
+      },
     ],
   },
   parameters: (z) => ({
@@ -49,7 +58,7 @@ export const createTaskWorktree = {
       .string()
       .describe("Description of the task or feature to work on"),
     git_repo_path: sharedParameters.git_repo_path_optional(z),
-    base_branch: sharedParameters.base_branch(z),
+    base_branch: sharedParameters.base_branch_optional(z),
   }),
   cb: async (
     args: Record<string, unknown>,
@@ -428,7 +437,11 @@ export const launchWorktree = {
         alias: "i",
         description: "Worktree identifier",
       },
-      { param: "editor", alias: "e", description: "Editor to use" },
+      {
+        param: "editor",
+        alias: "e",
+        description: "Editor to open (code/cursor). Defaults to 'cursor'",
+      },
     ],
   },
   parameters: (z) => ({
@@ -436,7 +449,7 @@ export const launchWorktree = {
     editor: z
       .string()
       .optional()
-      .describe("Editor to use (code, cursor, etc.). Defaults to 'cursor'"),
+      .describe("Editor to open (code/cursor). Defaults to 'cursor'"),
   }),
   cb: async (
     args: Record<string, unknown>,
@@ -572,7 +585,11 @@ export const doctorWorktrees = {
   cli: {
     aliases: ["doctor"],
     flags: [
-      { param: "git_repo_path", alias: "p", description: "Git repo path" },
+      {
+        param: "git_repo_path",
+        alias: "p",
+        description: "The path to the Git repo (Optional).",
+      },
     ],
   },
   parameters: (z) => ({

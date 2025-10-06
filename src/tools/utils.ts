@@ -64,7 +64,7 @@ export const sharedParameters = {
   /**
    * Base branch parameter
    */
-  base_branch: (z: ZodNamespace) =>
+  base_branch_optional: (z: ZodNamespace) =>
     z.string().optional().describe("Base branch (default: main)"),
 };
 

@@ -171,9 +171,19 @@ export async function parseArgs(
         toolArgs[firstStringFlag.param] = arg;
         i++;
       } else {
-        throw new Error(
-          `Unexpected argument: ${arg}. Use flags instead (e.g., --${tool.cli?.flags?.[0]?.param} "${arg}")`,
-        );
+        const firstStringFlag = tool.cli?.flags?.find((f) => {
+          const type = getParamType(f.param, typeMap);
+          return type === "string";
+        });
+        if (firstStringFlag) {
+          throw new Error(
+            `Unexpected argument: ${arg}. Use positional syntax: ${tool.name} <${firstStringFlag.param}> or flags: --${firstStringFlag.param} "${arg}"`,
+          );
+        } else {
+          throw new Error(
+            `Unexpected argument: ${arg}. Use flags instead (e.g., --${tool.cli?.flags?.[0]?.param} "${arg}")`,
+          );
+        }
       }
     }
   }

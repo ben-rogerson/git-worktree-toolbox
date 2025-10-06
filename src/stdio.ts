@@ -57,11 +57,60 @@ async function runServer() {
   );
 }
 
+function getToolUsageExamples(tool: McpTool): string[] {
+  const examples: string[] = [];
+
+  if (tool.cli?.flags && tool.cli.flags.length > 0) {
+    const firstStringFlag = tool.cli.flags.find((f) => {
+      // Simple heuristic: if it's not a boolean flag
+      return (
+        f.param !== "has_branch_removal" &&
+        f.param !== "push_changes" &&
+        f.param !== "avoid_dry_run"
+      );
+    });
+
+    if (firstStringFlag) {
+      examples.push(`gwtree ${tool.name} <${firstStringFlag.param}>`);
+      examples.push(
+        `gwtree ${tool.name} --${firstStringFlag.param} <${firstStringFlag.param}>`,
+      );
+
+      // Show example with additional flags
+      const booleanFlags = tool.cli.flags.filter(
+        (f) =>
+          f.param === "has_branch_removal" ||
+          f.param === "push_changes" ||
+          f.param === "avoid_dry_run",
+      );
+
+      if (booleanFlags.length > 0) {
+        const exampleFlags = booleanFlags.map((f) => `--${f.param}`).join(" ");
+        examples.push(
+          `gwtree ${tool.name} <${firstStringFlag.param}> ${exampleFlags}`,
+        );
+      }
+    }
+  }
+
+  return examples;
+}
+
 function showToolHelp(tool: McpTool): void {
   console.log(`🛠️  ${tool.name} - ${tool.description}\n`);
 
   if (tool.cli?.aliases && tool.cli.aliases.length > 0) {
     console.log(`Aliases: ${tool.cli.aliases.join(", ")}\n`);
+  }
+
+  // Show usage examples
+  const usageExamples = getToolUsageExamples(tool);
+  if (usageExamples.length > 0) {
+    console.log("Usage:");
+    for (const example of usageExamples) {
+      console.log(`  ${example}`);
+    }
+    console.log("");
   }
 
   if (tool.cli?.flags && tool.cli.flags.length > 0) {
@@ -149,6 +198,15 @@ async function main() {
         const aliasText = aliases ? ` (${aliases.join(", ")})` : "";
         console.log(`  ${tool.name}${aliasText}`);
         console.log(`    ${tool.description}`);
+
+        // Show usage examples
+        const usageExamples = getToolUsageExamples(tool);
+        if (usageExamples.length > 0) {
+          console.log(`    Usage:`);
+          for (const example of usageExamples) {
+            console.log(`      ${example}`);
+          }
+        }
 
         if (tool.cli?.flags && tool.cli.flags.length > 0) {
           console.log(`    Flags:`);
