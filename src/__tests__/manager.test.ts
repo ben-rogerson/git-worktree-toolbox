@@ -2,17 +2,14 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { WorktreeManager } from "../worktree/manager";
 import * as gitOps from "../worktree/git-operations";
 import { WorktreeMetadataManager } from "../worktree/metadata";
-import { WorktreeClaudeConfigGenerator } from "../claude/configGenerator";
 import type { WorktreeMetadata } from "../worktree/types";
 
 vi.mock("../worktree/git-operations");
 vi.mock("../worktree/metadata");
-vi.mock("../claude/configGenerator");
 vi.mock("../tools/worktree-lifecycle");
 
 const mockGitOps = vi.mocked(gitOps);
 const mockMetadataManager = vi.mocked(WorktreeMetadataManager);
-const mockConfigGenerator = vi.mocked(WorktreeClaudeConfigGenerator);
 
 describe("WorktreeManager", () => {
   let manager: WorktreeManager;
@@ -56,7 +53,6 @@ describe("WorktreeManager", () => {
     mockMetadataManager.getMetadataPath.mockReturnValue(
       "/metadata/task.config.yaml",
     );
-    mockConfigGenerator.createWorktreeConfig.mockResolvedValue();
     mockMetadataManager.addConversationEntry.mockResolvedValue();
   });
 
@@ -69,7 +65,6 @@ describe("WorktreeManager", () => {
 
       expect(mockGitOps.createWorkTree).toHaveBeenCalled();
       expect(mockMetadataManager.createMetadata).toHaveBeenCalled();
-      expect(mockConfigGenerator.createWorktreeConfig).toHaveBeenCalled();
       expect(mockMetadataManager.addConversationEntry).toHaveBeenCalled();
 
       expect(result.task_id).toBe("task-123");
@@ -145,7 +140,6 @@ describe("WorktreeManager", () => {
         metadata: mockMetadata,
       });
       mockMetadataManager.saveMetadata.mockResolvedValue();
-      mockConfigGenerator.removeWorktreeConfig.mockResolvedValue();
 
       await manager.archiveWorktreeByPathOrTaskId("task-123");
 
@@ -154,9 +148,6 @@ describe("WorktreeManager", () => {
         expect.objectContaining({
           worktree: expect.objectContaining({ status: "archived" }),
         }),
-      );
-      expect(mockConfigGenerator.removeWorktreeConfig).toHaveBeenCalledWith(
-        "test-worktree",
       );
     });
 

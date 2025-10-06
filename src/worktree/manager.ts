@@ -2,13 +2,13 @@
  * Worktree Manager
  *
  * High-level worktree orchestration:
- * - Create worktrees (with git worktree + metadata + Claude config)
+ * - Create worktrees (with git worktree + metadata)
  * - Archive worktrees (update status, clean up config)
  * - Lookup by ID/path (retrieve worktree metadata)
  * - Generate MR links (GitLab/GitHub merge request URLs)
  *
  * This manager coordinates between git operations, metadata management,
- * and Claude configuration to provide a unified worktree lifecycle.
+ * and metadata management to provide a unified worktree lifecycle.
  */
 
 import path from "path";
@@ -20,7 +20,6 @@ import {
   WorktreeCreationResult,
   WorktreeMetadata,
 } from "@/src/worktree/types";
-import { WorktreeClaudeConfigGenerator } from "@/src/claude/configGenerator";
 import { ensureWorktreeHasMetadata } from "@/src/tools/worktree-lifecycle";
 
 export interface WorktreeManagerConfig {
@@ -64,15 +63,7 @@ export class WorktreeManager {
         },
       );
 
-      // Step 3: Create Claude configuration
-      await WorktreeClaudeConfigGenerator.createWorktreeConfig({
-        worktreePath: worktree.path,
-        worktreeName: worktreeName,
-        channelId: null,
-        channelName: null,
-      });
-
-      // Step 4: Add conversation entry
+      // Step 3: Add conversation entry
       await WorktreeMetadataManager.addConversationEntry(worktree.path, {
         prompt: options.task_description,
         response: `Created worktree "${worktreeName}"`,
@@ -138,11 +129,6 @@ export class WorktreeManager {
     const metadata = worktree.metadata;
     metadata.worktree.status = "archived";
     await WorktreeMetadataManager.saveMetadata(worktree.worktreePath, metadata);
-
-    // Clean up Claude configuration
-    await WorktreeClaudeConfigGenerator.removeWorktreeConfig(
-      worktree.metadata.worktree.name,
-    );
   }
 
   async generateMRLinkByTaskId(taskId: string): Promise<string> {
