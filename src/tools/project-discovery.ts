@@ -11,6 +11,7 @@ import type { McpTool } from "@/src/tools/types";
 import type { WorktreeManager } from "@/src/worktree/manager";
 import { WorktreeMetadataManager } from "@/src/worktree/metadata";
 import { ensureWorktreeHasMetadata } from "./worktree-lifecycle";
+import { detectWorktreeOwnerRepo } from "@/src/utils/git";
 
 // ============================================================================
 // Types
@@ -217,18 +218,38 @@ export const listProjects = {
     { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
     try {
-      // Get configured directories from worktree manager
-      const configuredDirectories = worktreeManager.projectDirectories;
+      // Check if we're currently in a worktree
+      const currentDir = process.cwd();
+      const ownerRepo = await detectWorktreeOwnerRepo(currentDir);
 
-      const projects = discoverProjects(configuredDirectories);
-      const scannedDirs = getScannedDirectories(configuredDirectories);
+      let projects: DiscoveredProject[];
+      let scannedDirs: string[];
+
+      if (ownerRepo) {
+        // We're in a worktree, only show worktrees for the current project
+        const projectName = path.basename(ownerRepo);
+        projects = [
+          {
+            name: projectName,
+            path: ownerRepo,
+            hasWorktrees: hasWorktrees(ownerRepo),
+          },
+        ];
+        scannedDirs = [ownerRepo];
+      } else {
+        // Normal behavior - scan all configured directories
+        const configuredDirectories = worktreeManager.projectDirectories;
+        projects = discoverProjects(configuredDirectories);
+        scannedDirs = getScannedDirectories(configuredDirectories);
+      }
 
       // Ensure all worktrees in discovered projects have metadata
       for (const project of projects) {
         if (project.hasWorktrees) {
           try {
-            const worktrees =
-              await WorktreeMetadataManager.listAllWorktrees(project.path);
+            const worktrees = await WorktreeMetadataManager.listAllWorktrees(
+              project.path,
+            );
             const worktreePaths = worktrees.map((w) => w.worktreePath);
             await WorktreeMetadataManager.ensureMetadataForWorktrees(
               worktreePaths,
@@ -262,10 +283,17 @@ export const listProjects = {
       const projectsWithWorktrees = projects.filter((p) => p.hasWorktrees);
       const projectsWithoutWorktrees = projects.filter((p) => !p.hasWorktrees);
 
-      let text = `📂 Discovered Projects (${projects.length} total)\n\n`;
-
-      text += `Scanned directories:\n`;
-      text += scannedDirs.map((dir) => `  • ${dir}`).join("\n") + "\n\n";
+      let text: string;
+      if (ownerRepo) {
+        // We're in a worktree, show context-specific message
+        text = `🌳 Current Project Worktrees\n\n`;
+        text += `Running from worktree in: ${ownerRepo}\n\n`;
+      } else {
+        // Normal discovery mode
+        text = `📂 Discovered Projects (${projects.length} total)\n\n`;
+        text += `Scanned directories:\n`;
+        text += scannedDirs.map((dir) => `  • ${dir}`).join("\n") + "\n\n";
+      }
 
       if (projectsWithWorktrees.length > 0) {
         text += `Projects with worktrees (${projectsWithWorktrees.length}):\n`;
