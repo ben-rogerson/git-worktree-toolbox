@@ -14,14 +14,12 @@ import {
   createTaskWorktree,
   archiveWorktree,
   launchWorktree,
-  getWorktreeInfo,
   doctorWorktrees,
 } from "./worktree-lifecycle.js";
 
 // Worktree Changes Tools
 import {
-  listChangesFromSpecificWorktree,
-  forceCommitWorktree,
+  worktreeChanges,
   mergeRemoteWorktreeChangesIntoLocal,
 } from "./worktree-changes.js";
 
@@ -36,17 +34,14 @@ export interface WorktreeMcpToolsConfig {
 export const tools = [
   // Discovery & Navigation
   listProjects,
-  getWorktreeInfo,
+  launchWorktree,
   // Worktree Lifecycle
   createTaskWorktree,
-  doctorWorktrees,
+  worktreeChanges,
   archiveWorktree,
-  generateMrLink,
-  // Change Management
-  listChangesFromSpecificWorktree,
-  forceCommitWorktree,
-  launchWorktree,
+  doctorWorktrees,
   // Integration
+  generateMrLink,
   mergeRemoteWorktreeChangesIntoLocal,
 ] satisfies McpTool[];
 
@@ -81,7 +76,11 @@ export function register(server: Server, config: WorktreeMcpToolsConfig) {
         arguments: z.record(z.unknown()).optional(),
       }),
     }),
-    async (request) => {
+    async (
+      request,
+    ): Promise<{
+      content: { type: "text" | "image"; text?: string; image_data?: string }[];
+    }> => {
       const tool = tools.find((t) => t.name === request.params.name);
       if (!tool) {
         throw new Error(`Unknown tool: ${request.params.name}`);

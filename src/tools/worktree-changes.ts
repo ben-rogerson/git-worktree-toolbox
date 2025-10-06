@@ -16,22 +16,35 @@ import {
 import { listWorkTrees } from "@/src/worktree/git-operations";
 import { assertWorktreeName, sharedParameters } from "./utils";
 
-export const listChangesFromSpecificWorktree = {
+export const worktreeChanges = {
   name: "changes",
-  description: "Show all the changes in a worktree",
+  description:
+    "Show all changes in a worktree or current repo. Optionally commit and push changes.",
   aliases: ["changes"],
   parameters: (z) => ({
-    worktree_identifier: sharedParameters.worktree_identifier(z),
+    worktree_identifier: z
+      .string()
+      .optional()
+      .describe("Worktree path or task ID. Defaults to current directory."),
+    push_changes: z
+      .boolean()
+      .optional()
+      .describe("Commit and push all changes after displaying them"),
   }),
   cb: async (
     args: Record<string, unknown>,
     { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
-    const { worktree_identifier } = args as { worktree_identifier: string };
+    const { worktree_identifier, push_changes } = args as {
+      worktree_identifier?: string;
+      push_changes?: boolean;
+    };
 
     try {
+      // Use current directory if no identifier provided
+      const targetIdentifier = worktree_identifier || process.cwd();
       const worktree =
-        await worktreeManager.getWorktreeByPathOrTaskId(worktree_identifier);
+        await worktreeManager.getWorktreeByPathOrTaskId(targetIdentifier);
 
       if (!worktree) {
         // List available worktrees for better error message
@@ -40,7 +53,7 @@ export const listChangesFromSpecificWorktree = {
           content: [
             {
               type: "text",
-              text: `❌ Worktree '${worktree_identifier}' not found.\n\nAvailable worktrees:\n${worktrees
+              text: `❌ Worktree '${targetIdentifier}' not found.\n\nAvailable worktrees:\n${worktrees
                 .map((ws) => {
                   if (ws.metadata) {
                     return `• ${ws.metadata.worktree.name} (${ws.metadata.worktree.id})`;
@@ -160,6 +173,19 @@ export const listChangesFromSpecificWorktree = {
         ? "✅ Enabled"
         : "❌ Disabled";
 
+      // Get commit queue status
+      const commitStatus =
+        await autoCommitManager.getCommitQueueStatus(targetWorktreePath);
+
+      // Handle push if requested
+      if (push_changes) {
+        await autoCommitManager.forceCommit(targetWorktreePath);
+      }
+
+      const pushMessage = push_changes
+        ? "\n✅ All pending changes have been committed and pushed.\n"
+        : `\n💡 Use \`push_changes: true\` to commit and push pending changes.\n`;
+
       return {
         content: [
           {
@@ -170,6 +196,7 @@ export const listChangesFromSpecificWorktree = {
               `• **Task ID:** ${metadata.worktree.id}\n` +
               `• **Status:** ${metadata.worktree.status}\n` +
               `• **Branch:** ${currentBranch}\n` +
+              `• **Base Branch:** ${metadata.git_info.base_branch}\n` +
               `• **Path:** ${targetWorktreePath}\n` +
               `• **Created:** ${new Date(metadata.worktree?.created_at ?? "").toLocaleDateString()}\n` +
               `• **Created By:** ${metadata.worktree.created_by}\n` +
@@ -179,9 +206,11 @@ export const listChangesFromSpecificWorktree = {
               `• **Integration:** ${integrationInfo}\n\n` +
               `**Git Changes:**\n` +
               `• **Committed Changes:** ${committedText}\n` +
-              `• **Uncommitted Changes:** ${uncommittedChanges.length} file${uncommittedChanges.length !== 1 ? "s" : ""}\n\n` +
-              `**Uncommitted Files:**\n${uncommittedText}\n\n` +
-              `💡 Use "force commit worktree" with task ID ${metadata.worktree.id} to commit pending changes.`,
+              `• **Uncommitted Changes:** ${uncommittedChanges.length} file${uncommittedChanges.length !== 1 ? "s" : ""}\n` +
+              `• **Pending Changes:** ${commitStatus.pending_changes}\n` +
+              `• **Last Commit:** ${commitStatus.last_commit?.toISOString() || "None"}\n\n` +
+              `**Uncommitted Files:**\n${uncommittedText}` +
+              pushMessage,
           },
         ],
       };
@@ -191,58 +220,6 @@ export const listChangesFromSpecificWorktree = {
           {
             type: "text",
             text: `❌ Failed to get worktree changes: ${error instanceof Error ? error.message : "Unknown error"}`,
-          },
-        ],
-      };
-    }
-  },
-} satisfies McpTool;
-
-export const forceCommitWorktree = {
-  name: "push",
-  description: "Commit and push all changes",
-  aliases: ["push"],
-  parameters: (z) => ({
-    task_id: sharedParameters.task_id(z),
-  }),
-  cb: async (
-    args: Record<string, unknown>,
-    { worktreeManager }: { worktreeManager: WorktreeManager },
-  ) => {
-    const { task_id } = args as { task_id: string };
-
-    try {
-      const worktree = await worktreeManager.getWorktreeByTaskId(task_id);
-
-      if (!worktree) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `❌ No worktree found for task ${task_id}`,
-            },
-          ],
-        };
-      }
-
-      await autoCommitManager.forceCommit(worktree.worktreePath);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text:
-              `✅ Force commit completed for worktree\n\n` +
-              `All pending changes have been committed and pushed.`,
-          },
-        ],
-      };
-    } catch (error) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ Failed to force commit: ${error instanceof Error ? error.message : "Unknown error"}`,
           },
         ],
       };

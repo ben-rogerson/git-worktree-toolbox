@@ -6,7 +6,8 @@
       "Bash(npm install:*)",
       "Bash(npm run lint)",
       "Bash(npm run build:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": [],
@@ -14,7 +15,6 @@
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [],
-  "outputStyle": "Sr. Software Developer",
   "hooks": {
     "PreToolUse": [
       {
@@ -27,5 +27,6 @@
         ]
       }
     ]
-  }
+  },
+  "outputStyle": "Sr. Software Developer"
 }

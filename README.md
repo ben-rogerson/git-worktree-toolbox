@@ -4,29 +4,31 @@ Gives AI agents the power to spin up isolated git worktrees on demand. Work on m
 
 Each task runs in its own sandbox—experiment, so you can break things or pivot strategies—while your main branch stays pristine. Built for AI-assisted workflows where rapid iteration and context switching are the norm.
 
-### Available Tools
+### Available MCP Tools
 
 **Discovery & Navigation**
 
 - `list` - List projects and their worktrees
-- `info` - Get detailed worktree information
+- `go` - Open worktree folder in your editor
 
 **Worktree Lifecycle**
 
-- `new` - Create worktree and matching branch
-- `init` - Initialize metadata for existing worktree
+- `new` - Create a new worktree with a matching branch
+- `changes` - Show changes and optionally commit and push
 - `archive` - Archive worktree and matching branch
-- `go` - Open worktree in IDE/terminal
-
-**Change Management**
-
-- `changes` - Show detailed changes
-- `push` - Commit and push all changes
-- `grab` - Merge changes from another worktree
+- `doctor` - Check and fix worktree metadata
 
 **Integration**
 
 - `mr` - Supply the MR/PR creation link
+- `grab` - Merge changes from another worktree
+
+### Available CLI Tools
+
+- `gwtree` - Start the MCP server
+- `gwtree --help` - Show help
+- `gwtree --version` - Show version
+- `gwtree [tool] [args]` - Run tool directly
 
 ## Get Started
 
