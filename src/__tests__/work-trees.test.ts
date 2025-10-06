@@ -381,7 +381,7 @@ branch refs/heads/feature
           await expect(removeWorkTree("test-branch")).resolves.toBeUndefined();
         });
 
-        it("should clean up work tree directory", async () => {
+        it("should remove work tree via git command", async () => {
           mockExecAsync
             // listWorkTrees call (first call in removeWorkTree)
             .mockResolvedValueOnce({
@@ -402,12 +402,12 @@ branch refs/heads/feature
             // git worktree prune (after removal)
             .mockResolvedValueOnce({ stdout: "", stderr: "" });
 
-          mockFs.access.mockResolvedValue(undefined);
-          mockFs.rm.mockResolvedValue(undefined);
-
           await removeWorkTree("test-branch");
 
-          expect(mockFs.rm).toHaveBeenCalled();
+          expect(mockExecAsync).toHaveBeenCalledWith(
+            'git worktree remove "/path/to/test-branch"',
+            expect.any(Object),
+          );
         });
 
         it("should force remove if directory is locked", async () => {

@@ -14,7 +14,6 @@
 import { v4 as uuidv4 } from "uuid";
 import * as fs from "fs/promises";
 import * as path from "path";
-import * as yaml from "js-yaml";
 import {
   gitWorktreeAdd,
   gitWorktreeRemove,
@@ -23,25 +22,9 @@ import {
   gitCreateBranch,
   gitHasCommits,
 } from "@/src/utils/git";
-import {
-  ensureDirectory,
-  writeFileWithDirectory,
-  removeFileOrDirectory,
-} from "@/src/utils/fs";
-import { METADATA_DIR } from "@/src/utils/constants";
+import { ensureDirectory } from "@/src/utils/fs";
 import { assertGitRepoPath } from "@/src/tools/utils";
 import { WorkTree, WorkTreeError } from "@/src/worktree/types";
-
-export interface WorktreeMetadataFile {
-  id: string;
-  name: string;
-  path: string;
-  branch: string;
-  created: Date;
-  lastModified: Date;
-}
-
-const METADATA_FILE = "task.config.yaml";
 
 /**
  * Create a WorkTree error with a specific code
@@ -74,66 +57,6 @@ function isValidBranchName(branch: string): boolean {
   ];
 
   return !invalidPatterns.some((pattern) => pattern.test(branch));
-}
-
-/**
- * Get the metadata directory path for a worktree
- */
-function getMetadataDir(worktreePath: string): string {
-  return path.join(worktreePath, METADATA_DIR);
-}
-
-/**
- * Get the metadata file path for a worktree
- */
-function getMetadataFilePath(worktreePath: string): string {
-  return path.join(getMetadataDir(worktreePath), METADATA_FILE);
-}
-
-/**
- * Save worktree metadata
- */
-async function saveMetadata(worktree: WorkTree): Promise<void> {
-  const metadataFile = getMetadataFilePath(worktree.path);
-
-  try {
-    const metadata: WorktreeMetadataFile = {
-      ...worktree,
-      lastModified: new Date(),
-    };
-
-    await writeFileWithDirectory(
-      metadataFile,
-      yaml.dump(metadata, { indent: 2, lineWidth: 120, quotingType: '"' }),
-    );
-  } catch (error) {
-    throw createWorkTreeError(
-      `Failed to save metadata: ${error}`,
-      "PERMISSION_DENIED",
-    );
-  }
-}
-
-/**
- * Load worktree metadata
- */
-async function loadMetadata(
-  worktreePath: string,
-): Promise<WorktreeMetadataFile | null> {
-  const metadataFile = getMetadataFilePath(worktreePath);
-
-  try {
-    const content = await fs.readFile(metadataFile, "utf-8");
-    const metadata = yaml.load(content) as WorktreeMetadataFile;
-
-    // Convert date strings back to Date objects
-    metadata.created = new Date(metadata.created);
-    metadata.lastModified = new Date(metadata.lastModified);
-
-    return metadata;
-  } catch {
-    return null; // Metadata doesn't exist or is corrupted
-  }
 }
 
 /**
@@ -177,7 +100,22 @@ export async function createWorkTree(
     // If listWorkTrees fails, continue (maybe first worktree)
   }
 
-  const workTreePath = customPath || path.resolve(`../worktrees/${name}`);
+  let workTreePath: string;
+  if (customPath) {
+    workTreePath = customPath;
+  } else {
+    const currentDir = process.cwd();
+    if (currentDir.includes("/worktrees/")) {
+      const worktreesIndex = currentDir.indexOf("/worktrees/");
+      const basePath = currentDir.substring(
+        0,
+        worktreesIndex + "/worktrees".length,
+      );
+      workTreePath = path.join(basePath, name);
+    } else {
+      workTreePath = path.resolve(`../worktrees/${name}`);
+    }
+  }
   const gitOptions = gitRepoPath ? { cwd: gitRepoPath } : {};
 
   // Validate path permissions by trying to create parent directory
@@ -245,19 +183,6 @@ export async function createWorkTree(
     created: new Date(),
   };
 
-  // Save metadata
-  try {
-    await saveMetadata(workTree);
-  } catch (error) {
-    // If metadata save fails, try to clean up the worktree
-    try {
-      await gitWorktreeRemove(workTreePath, true, gitOptions);
-    } catch {
-      // Ignore cleanup errors
-    }
-    throw error;
-  }
-
   return workTree;
 }
 
@@ -298,52 +223,30 @@ export async function listWorkTrees(gitRepoPath?: string): Promise<WorkTree[]> {
 
       if (workTreePath) {
         try {
-          // Try to load metadata first for persistent ID and details
-          const metadata = await loadMetadata(workTreePath);
+          const name = path.basename(workTreePath);
+          let created = new Date();
 
-          if (metadata) {
-            // Use metadata if available
-            workTrees.push({
-              id: metadata.id,
-              name: metadata.name,
-              path: metadata.path,
-              branch: metadata.branch,
-              created: metadata.created,
-            });
-          } else {
-            // Fallback: create entry without metadata (existing worktrees)
-            const name = path.basename(workTreePath);
-            let created = new Date();
-
-            try {
-              const stats = await fs.stat(workTreePath);
-              created = stats.birthtime || stats.mtime;
-            } catch {
-              // Use current date if stat fails
-            }
-
-            // Strip refs/heads/ prefix from branch name
-            const cleanBranch = branch
-              ? branch.replace(/^refs\/heads\//, "")
-              : "unknown";
-
-            const workTree: WorkTree = {
-              id: uuidv4(),
-              name,
-              path: workTreePath,
-              branch: cleanBranch,
-              created,
-            };
-
-            // Try to save metadata for future use
-            try {
-              await saveMetadata(workTree);
-            } catch {
-              // Ignore metadata save errors for existing worktrees
-            }
-
-            workTrees.push(workTree);
+          try {
+            const stats = await fs.stat(workTreePath);
+            created = stats.birthtime || stats.mtime;
+          } catch {
+            // Use current date if stat fails
           }
+
+          // Strip refs/heads/ prefix from branch name
+          const cleanBranch = branch
+            ? branch.replace(/^refs\/heads\//, "")
+            : "unknown";
+
+          const workTree: WorkTree = {
+            id: uuidv4(),
+            name,
+            path: workTreePath,
+            branch: cleanBranch,
+            created,
+          };
+
+          workTrees.push(workTree);
         } catch (error) {
           // Filter out corrupted/invalid worktrees
           console.warn(
@@ -431,15 +334,6 @@ export async function removeWorkTree(
           "GIT_ERROR",
         );
       }
-    }
-
-    // Clean up metadata directory if it still exists
-    try {
-      const metadataDir = getMetadataDir(targetWorkTree.path);
-      await removeFileOrDirectory(metadataDir);
-    } catch (error) {
-      // Don't fail the operation if metadata cleanup fails
-      console.warn("Failed to clean up metadata:", error);
     }
   } catch (error: unknown) {
     if ((error as WorkTreeError).code) {
