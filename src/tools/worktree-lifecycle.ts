@@ -274,7 +274,7 @@ export const archiveWorktree = {
               {
                 type: "text",
                 text:
-                  `📦 Successfully archived worktree "${worktreeName}"\n\n` +
+                  `✅ Successfully archived worktree "${worktreeName}"\n\n` +
                   `Worktree has been safely archived.\n\n` +
                   `Details:\n${details.join("\n")}`,
               },
@@ -382,7 +382,7 @@ export const archiveWorktree = {
           {
             type: "text",
             text:
-              `📦 Successfully archived worktree "${worktree.metadata.worktree.name}" (${worktree.metadata.worktree.id})\n\n` +
+              `✅ Successfully archived worktree "${worktree.metadata.worktree.name}" (${worktree.metadata.worktree.id})\n\n` +
               `Worktree has been safely archived and the worktree status updated.\n\n` +
               `Details:\n${details.join("\n")}`,
           },

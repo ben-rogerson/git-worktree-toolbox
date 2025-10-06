@@ -268,7 +268,7 @@ export const listProjects = {
         const tipMessage =
           configuredDirectories && configuredDirectories.length > 0
             ? `💡 PROJECT_DIRECTORIES has been set.`
-            : `💡 Customize dirs with this env var:\n\`export PROJECT_DIRECTORIES=~/Users/ben/Projects:~/Users/ben/Work\`.`;
+            : `💡 Set dirs with the PROJECT_DIRECTORIES env var\neg: \`export PROJECT_DIRECTORIES="$HOME/Projects:$HOME/Code"\`.`;
 
         return {
           content: [
@@ -303,7 +303,7 @@ export const listProjects = {
         if (configuredDirectories && configuredDirectories.length > 0) {
           text += `💡 PROJECT_DIRECTORIES has been set.\n\n`;
         } else {
-          text += `💡 Customize dirs with this env var:\n\`export PROJECT_DIRECTORIES=~/Users/ben/Projects:~/Users/ben/Work\`.\n\n`;
+          text += `💡 Set dirs with the PROJECT_DIRECTORIES env var\neg: \`export PROJECT_DIRECTORIES="$HOME/Projects:$HOME/Code"\`.\n\n`;
         }
       }
 

@@ -108,13 +108,22 @@ npm install -g git-worktree-toolbox
 
 ### Configuration
 
-Set custom project directories for the `list projects` tool (optional):
+Configure the server behavior with environment variables (optional):
 
 ```env
-# Custom project directories (colon-separated)
+# Base directory for all worktrees
+# Default: ~/.gwtree/worktrees
+BASE_WORKTREES_PATH=~/my-custom-worktrees
+
+# Custom project directories for discovery (colon-separated)
 # Default: ~/Projects:~/Code:~/Developer:~/dev
 PROJECT_DIRECTORIES=~/custom-projects:~/work:~/repos
 ```
+
+**Environment Variables:**
+
+- `BASE_WORKTREES_PATH` - Override the default location where worktrees are created
+- `PROJECT_DIRECTORIES` - Colon-separated list of directories to scan for git projects
 
 ## Development
 
