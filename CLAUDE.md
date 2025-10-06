@@ -1,11 +1,14 @@
-- **Avoid default exports**; use named exports exclusively across all source files.
-- **NEVER use `any` type, use types**. Look up types rather than guessing.
-- **It's okay to break code when refactoring**. We are in pre-production. Do not use fallbacks.
-- **ALWAYS throw errors early and often.** Do not use fallbacks.
+- Avoid default exports; use named exports exclusively across all source files.
+- NEVER use `any` type, use types. Look up types rather than guessing.
+- It's okay to break code when refactoring. We are in pre-production. Do not use fallbacks.
+- ALWAYS throw errors early and often. Do not use fallbacks.
 - At the end of the changes you make, create three more todos and run through them:
   - Run `npm run lint` to check for errors and fix them.
   - Add additional tests or edit existing tests to cover the new/adjusted functionality.
   - Run `npm run test` to check for tests and fix them.
+- Avoid adding comments that explain why something was added/removed/changed. Use comments instead to explain complexities, tradeoffs and strange decisions.
+- Instead of using if/else blocks, try to extract logic into functions that use early returns.
+- Avoid using excessive tabbed blocks of code. Use functions instead.
 
 Keep the README.md file up to date with the latest changes / installation instructions.
 
