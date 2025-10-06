@@ -208,11 +208,34 @@ export async function gitCommit(
   return result.stdout;
 }
 
+export async function gitHasRemote(
+  remote = "origin",
+  options: GitCommandOptions = {},
+): Promise<boolean> {
+  try {
+    const command = `git remote get-url ${remote}`;
+    await executeGitCommand(command, options);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function gitPush(
   remote = "origin",
   branch?: string,
   options: GitCommandOptions = {},
 ): Promise<void> {
+  // Check if the remote exists before attempting to push
+  const remoteExists = await gitHasRemote(remote, options);
+  if (!remoteExists) {
+    throw createGitError(
+      `Remote '${remote}' does not exist. Cannot push changes.`,
+      "GIT_ERROR",
+      `git push -u ${remote}${branch ? ` ${branch}` : ""}`,
+    );
+  }
+
   const branchArg = branch ? ` ${branch}` : "";
   const command = `git push -u ${remote}${branchArg}`;
   await executeGitCommand(command, options);
@@ -396,8 +419,21 @@ export async function gitHasPendingChanges(
 
   // Filter out common metadata files that shouldn't block removal
   const significantChanges = lines.filter((line) => {
-    const filePath = line.slice(3); // Remove status prefix
-    return !shouldIgnoreFile(filePath) && !filePath.match(/^\.gitignore$/);
+    // Parse git status line format: "XY filename" or " X filename"
+    // X and Y are status codes, filename starts after the status codes and spaces
+    const trimmedLine = line.trim();
+    const match = trimmedLine.match(/^[AMDRC?]{1,2}\s+(.+)$/);
+    if (!match) {
+      // If we can't parse the line, include it to be safe
+      return true;
+    }
+
+    const filePath = match[1];
+    const shouldIgnore = shouldIgnoreFile(filePath);
+    const isGitignore = filePath.match(/^\.gitignore$/);
+    const shouldInclude = !shouldIgnore && !isGitignore;
+
+    return shouldInclude;
   });
 
   return significantChanges.length > 0;

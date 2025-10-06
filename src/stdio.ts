@@ -5,6 +5,7 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { parseArgs, buildToolAliases } from "./cli-parser.js";
+import type { McpTool } from "./tools/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -54,6 +55,26 @@ async function runServer() {
   console.info(
     `Git Worktree Toolbox ${packageJson.version} MCP Server running on stdio`,
   );
+}
+
+function showToolHelp(tool: McpTool): void {
+  console.log(`🛠️  ${tool.name} - ${tool.description}\n`);
+
+  if (tool.cli?.aliases && tool.cli.aliases.length > 0) {
+    console.log(`Aliases: ${tool.cli.aliases.join(", ")}\n`);
+  }
+
+  if (tool.cli?.flags && tool.cli.flags.length > 0) {
+    console.log("Flags:");
+    for (const flag of tool.cli.flags) {
+      const aliasText = flag.alias ? `-${flag.alias}, ` : "";
+      console.log(`  ${aliasText}--${flag.param}  ${flag.description}`);
+    }
+  } else {
+    console.log("No flags available for this tool.");
+  }
+
+  console.log("");
 }
 
 async function runTool(
@@ -111,9 +132,7 @@ async function main() {
       );
       console.log("  gwtree --version, -v            Show version");
       console.log("  gwtree --help, -h               Show this help");
-      console.log(
-        "  gwtree [tool] [flags]           Run tool with flags\n",
-      );
+      console.log("  gwtree [tool] [flags]           Run tool with flags\n");
       console.log("🛠️  Available tools:\n");
 
       const aliasMap = new Map<string, string[]>();
@@ -144,6 +163,22 @@ async function main() {
       process.exit(0);
       break;
     }
+
+    case "tool-help":
+      if (!parsed.toolName) {
+        throw new Error("Tool name is required");
+      }
+      const TOOL_ALIASES = buildToolAliases(worktreeTools.tools);
+      const resolvedToolName = TOOL_ALIASES[parsed.toolName] || parsed.toolName;
+      const tool = worktreeTools.tools.find((t) => t.name === resolvedToolName);
+      if (!tool) {
+        throw new Error(
+          `Unknown tool: ${parsed.toolName}. Run 'gwtree --help' to see available tools.`,
+        );
+      }
+      showToolHelp(tool);
+      process.exit(0);
+      break;
 
     case "tool":
       if (!parsed.toolName) {

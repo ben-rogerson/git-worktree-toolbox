@@ -322,11 +322,16 @@ export async function listWorkTrees(gitRepoPath?: string): Promise<WorkTree[]> {
               // Use current date if stat fails
             }
 
+            // Strip refs/heads/ prefix from branch name
+            const cleanBranch = branch
+              ? branch.replace(/^refs\/heads\//, "")
+              : "unknown";
+
             const workTree: WorkTree = {
               id: uuidv4(),
               name,
               path: workTreePath,
-              branch: branch || "unknown",
+              branch: cleanBranch,
               created,
             };
 

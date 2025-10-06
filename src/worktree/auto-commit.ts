@@ -12,7 +12,13 @@
 
 import { WorktreeMetadataManager } from "@/src/worktree/metadata";
 import type { AutoCommitInfo } from "@/src/worktree/types";
-import { gitStatus, gitAdd, gitCommit, gitPush } from "@/src/utils/git";
+import {
+  gitStatus,
+  gitAdd,
+  gitCommit,
+  gitPush,
+  gitHasRemote,
+} from "@/src/utils/git";
 import { createMissingMetadataError } from "@/src/tools/utils";
 
 export interface AutoCommitOptions {
@@ -220,6 +226,16 @@ export class AutoCommitManager {
       }
 
       const branchName = metadata.worktree.branch;
+
+      // Check if origin remote exists before attempting to push
+      const hasOrigin = await gitHasRemote("origin", { cwd: worktreePath });
+      if (!hasOrigin) {
+        console.log(
+          `No 'origin' remote configured for ${worktreePath}. Skipping push.`,
+        );
+        return;
+      }
+
       await gitPush("origin", branchName, { cwd: worktreePath });
     } catch (error) {
       throw new Error(`Failed to git push in ${worktreePath}: ${error}`);

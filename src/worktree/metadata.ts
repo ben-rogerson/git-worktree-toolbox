@@ -340,7 +340,7 @@ export class WorktreeMetadataManager {
       return byTaskId;
     }
 
-    // Finally, try to find by worktree name
+    // Try to find by worktree name or branch name
     if (!fs.existsSync(this.METADATA_ROOT)) {
       return null;
     }
@@ -363,7 +363,13 @@ export class WorktreeMetadataManager {
               const yamlContent = fs.readFileSync(metadataPath, "utf8");
               const metadata = yaml.load(yamlContent) as WorktreeMetadata;
 
+              // Check by worktree name
               if (metadata.worktree.name === identifier) {
+                return { worktreePath: metadata.worktree.path, metadata };
+              }
+
+              // Check by branch name
+              if (metadata.worktree.branch === identifier) {
                 return { worktreePath: metadata.worktree.path, metadata };
               }
             } catch (error) {

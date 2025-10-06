@@ -5,7 +5,7 @@
 import type { McpTool } from "@/src/tools/types";
 
 interface ParsedArgs {
-  mode: "server" | "version" | "help" | "tool";
+  mode: "server" | "version" | "help" | "tool" | "tool-help";
   toolName?: string;
   toolArgs?: Record<string, unknown>;
 }
@@ -130,6 +130,11 @@ export async function parseArgs(
         : arg.slice(1).length === 1
           ? arg.slice(1)
           : arg.slice(1);
+
+      // Check for help flag for this specific tool
+      if (flagName === "help" || flagName === "h") {
+        return { mode: "tool-help", toolName: tool.name };
+      }
 
       // Find flag definition
       const flagDef = tool.cli?.flags?.find(

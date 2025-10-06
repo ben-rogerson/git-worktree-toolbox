@@ -1,4 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const mockExecAsync = vi.hoisted(() => vi.fn());
+
+// Mock the dependencies
+vi.mock("child_process", () => ({
+  exec: vi.fn(),
+}));
+
+vi.mock("util", () => ({
+  promisify: vi.fn(() => mockExecAsync),
+}));
+
 import {
   createWorkTree,
   listWorkTrees,
@@ -6,25 +18,15 @@ import {
 } from "../worktree/git-operations";
 import type { WorkTree } from "../worktree/types";
 import * as fs from "fs/promises";
-import { exec } from "child_process";
-import { promisify } from "util";
 
-// Mock the dependencies
-vi.mock("child_process", () => ({
-  exec: vi.fn(),
-}));
 vi.mock("fs/promises");
 vi.mock("fs");
-vi.mock("util", () => ({
-  promisify: vi.fn(),
-}));
+
 vi.mock("uuid", () => ({
   v4: vi.fn(() => "test-uuid-123"),
 }));
 
-vi.mocked(exec);
 const mockFs = vi.mocked(fs);
-const mockPromisify = vi.mocked(promisify);
 
 // Test constants
 const MOCK_WORK_TREE: WorkTree = {
@@ -53,6 +55,7 @@ branch refs/heads/feature-branch
 describe("Work Trees", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockExecAsync.mockReset();
 
     // Setup default mocks
     mockFs.mkdir.mockResolvedValue(undefined);
@@ -62,7 +65,7 @@ describe("Work Trees", () => {
     mockFs.stat.mockResolvedValue({
       birthtime: new Date("2024-01-01T00:00:00.000Z"),
       mtime: new Date("2024-01-01T00:00:00.000Z"),
-    } as any);
+    } as never);
   });
 
   describe("createWorkTree", () => {
@@ -91,11 +94,13 @@ describe("Work Trees", () => {
       });
 
       it("should handle existing work tree names", async () => {
-        // Mock successful exec for listWorkTrees
-        const mockExecAsync = vi.fn().mockResolvedValue({
-          stdout: `worktree ${MOCK_WORK_TREE.path}\nbranch refs/heads/${MOCK_WORK_TREE.branch}\n\n`,
-        });
-        mockPromisify.mockReturnValue(mockExecAsync);
+        // Mock listWorkTrees to return existing worktree with same name
+        // Use a path that will result in the same name when basename is applied
+        const worktreePath = `/path/to/${MOCK_WORK_TREE.name}`;
+        mockExecAsync.mockResolvedValueOnce({
+          stdout: `worktree ${worktreePath}\nbranch refs/heads/${MOCK_WORK_TREE.branch}\n\n`,
+          stderr: "",
+        }); // listWorkTrees
 
         await expect(
           createWorkTree(MOCK_WORK_TREE.name, "main"),
@@ -107,19 +112,19 @@ describe("Work Trees", () => {
         mockFs.mkdir.mockRejectedValue(new Error("EACCES: permission denied"));
 
         await expect(createWorkTree("test", "main")).rejects.toThrow(
-          "Permission denied",
+          "Failed to create directory",
         );
       });
 
       describe("successful creation", () => {
         it("should create a work tree with name and branch", async () => {
           // Mock successful git worktree operations
-          const mockExecAsync = vi.fn();
           mockExecAsync
-            .mockResolvedValueOnce({ stdout: "" }) // listWorkTrees returns empty
-            .mockResolvedValueOnce({ stdout: "success" }); // createWorktree succeeds
-
-          mockPromisify.mockReturnValue(mockExecAsync);
+            .mockResolvedValueOnce({ stdout: "commit-hash", stderr: "" }) // gitHasCommits
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitBranchExists returns false
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitCreateBranch
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees returns empty
+            .mockResolvedValueOnce({ stdout: "success", stderr: "" }); // gitWorktreeAdd succeeds
 
           const result = await createWorkTree("test-worktree", "test");
 
@@ -132,26 +137,24 @@ describe("Work Trees", () => {
         it("should create a work tree with custom path", async () => {
           const customPath = "/custom/path/worktree";
 
-          // Mock successful operations
-          const mockExecAsync = vi.fn();
           mockExecAsync
-            .mockResolvedValueOnce({ stdout: "" }) // listWorkTrees returns empty
-            .mockResolvedValueOnce({ stdout: "success" }); // createWorktree succeeds
-
-          mockPromisify.mockReturnValue(mockExecAsync);
+            .mockResolvedValueOnce({ stdout: "commit-hash", stderr: "" }) // gitHasCommits
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitBranchExists
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitCreateBranch
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees
+            .mockResolvedValueOnce({ stdout: "success", stderr: "" }); // gitWorktreeAdd
 
           const result = await createWorkTree("test", "main", customPath);
           expect(result.path).toBe(customPath);
         });
 
         it("should generate unique ID for work tree", async () => {
-          // Mock successful operations
-          const mockExecAsync = vi.fn();
           mockExecAsync
-            .mockResolvedValueOnce({ stdout: "" }) // listWorkTrees returns empty
-            .mockResolvedValueOnce({ stdout: "success" }); // createWorktree succeeds
-
-          mockPromisify.mockReturnValue(mockExecAsync);
+            .mockResolvedValueOnce({ stdout: "commit-hash", stderr: "" }) // gitHasCommits
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitBranchExists
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitCreateBranch
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees
+            .mockResolvedValueOnce({ stdout: "success", stderr: "" }); // gitWorktreeAdd
 
           const result = await createWorkTree("test", "main");
           expect(result.id).toBe("test-uuid-123");
@@ -160,13 +163,12 @@ describe("Work Trees", () => {
         });
 
         it("should set creation timestamp", async () => {
-          // Mock successful operations
-          const mockExecAsync = vi.fn();
           mockExecAsync
-            .mockResolvedValueOnce({ stdout: "" }) // listWorkTrees returns empty
-            .mockResolvedValueOnce({ stdout: "success" }); // createWorktree succeeds
-
-          mockPromisify.mockReturnValue(mockExecAsync);
+            .mockResolvedValueOnce({ stdout: "commit-hash", stderr: "" }) // gitHasCommits
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitBranchExists
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitCreateBranch
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees
+            .mockResolvedValueOnce({ stdout: "success", stderr: "" }); // gitWorktreeAdd
 
           const before = new Date();
           const result = await createWorkTree("test", "main");
@@ -189,11 +191,7 @@ describe("Work Trees", () => {
         });
 
         it("should handle git command failures", async () => {
-          // Mock promisify to return a function that rejects
-          const { promisify } = await import("util");
-          vi.mocked(promisify).mockReturnValue(
-            vi.fn().mockRejectedValue(new Error("git command failed")),
-          );
+          mockExecAsync.mockRejectedValue(new Error("git command failed"));
 
           await expect(listWorkTrees()).rejects.toThrow(
             "Failed to list work trees",
@@ -201,7 +199,6 @@ describe("Work Trees", () => {
         });
 
         it("should filter out invalid/corrupted work trees", async () => {
-          // Mock git output with malformed entries
           const malformedOutput = `worktree /path/to/valid
 branch refs/heads/main
 
@@ -212,10 +209,10 @@ worktree /path/to/valid2
 branch refs/heads/feature
 
 `;
-          const { promisify } = await import("util");
-          vi.mocked(promisify).mockReturnValue(
-            vi.fn().mockResolvedValue({ stdout: malformedOutput }),
-          );
+          mockExecAsync.mockResolvedValue({
+            stdout: malformedOutput,
+            stderr: "",
+          });
 
           const result = await listWorkTrees();
 
@@ -228,22 +225,17 @@ branch refs/heads/feature
 
       describe("data retrieval", () => {
         it("should return empty array when no work trees exist", async () => {
-          // Mock empty git output
-          const { promisify } = await import("util");
-          vi.mocked(promisify).mockReturnValue(
-            vi.fn().mockResolvedValue({ stdout: "" }),
-          );
+          mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
 
           const result = await listWorkTrees();
           expect(result).toEqual([]);
         });
 
         it("should return all work trees with proper structure", async () => {
-          // Mock git worktree list output
-          const { promisify } = await import("util");
-          vi.mocked(promisify).mockReturnValue(
-            vi.fn().mockResolvedValue({ stdout: MOCK_WORKTREE_LIST_OUTPUT }),
-          );
+          mockExecAsync.mockResolvedValue({
+            stdout: MOCK_WORKTREE_LIST_OUTPUT,
+            stderr: "",
+          });
 
           const result = await listWorkTrees();
 
@@ -265,10 +257,10 @@ branch refs/heads/feature
         });
 
         it("should include main working directory", async () => {
-          const { promisify } = await import("util");
-          vi.mocked(promisify).mockReturnValue(
-            vi.fn().mockResolvedValue({ stdout: MOCK_WORKTREE_LIST_OUTPUT }),
-          );
+          mockExecAsync.mockResolvedValue({
+            stdout: MOCK_WORKTREE_LIST_OUTPUT,
+            stderr: "",
+          });
 
           const result = await listWorkTrees();
 
@@ -279,24 +271,23 @@ branch refs/heads/feature
         });
 
         it("should sort work trees by creation date", async () => {
-          // Mock multiple worktrees with different creation times
-          const { promisify } = await import("util");
-          vi.mocked(promisify).mockReturnValue(
-            vi.fn().mockResolvedValue({ stdout: MOCK_WORKTREE_LIST_OUTPUT }),
-          );
+          mockExecAsync.mockResolvedValue({
+            stdout: MOCK_WORKTREE_LIST_OUTPUT,
+            stderr: "",
+          });
 
           // Mock different stat times for different paths
-          mockFs.stat.mockImplementation((path) => {
-            if (path === "/path/to/main") {
+          mockFs.stat.mockImplementation((statPath) => {
+            if (statPath === "/path/to/main") {
               return Promise.resolve({
                 birthtime: new Date("2024-01-01T00:00:00.000Z"),
                 mtime: new Date("2024-01-01T00:00:00.000Z"),
-              } as any);
+              } as never);
             } else {
               return Promise.resolve({
                 birthtime: new Date("2024-01-02T00:00:00.000Z"),
                 mtime: new Date("2024-01-02T00:00:00.000Z"),
-              } as any);
+              } as never);
             }
           });
 
@@ -320,11 +311,7 @@ branch refs/heads/feature
         });
 
         it("should handle non-existent work tree names", async () => {
-          // Mock listWorkTrees to return empty array
-          const { promisify } = await import("util");
-          vi.mocked(promisify).mockReturnValue(
-            vi.fn().mockResolvedValue({ stdout: "" }),
-          );
+          mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
 
           await expect(removeWorkTree("non-existent")).rejects.toThrow(
             "not found",
@@ -332,17 +319,12 @@ branch refs/heads/feature
         });
 
         it("should prevent removal of main work tree", async () => {
-          // Mock listWorkTrees to return main worktree
-
-          // Mock the current working directory check
           vi.spyOn(process, "cwd").mockReturnValue("/path/to/main");
 
-          const { promisify } = await import("util");
-          vi.mocked(promisify).mockReturnValue(
-            vi.fn().mockResolvedValue({
-              stdout: `worktree ${process.cwd()}\nbranch refs/heads/main\n\n`,
-            }),
-          );
+          mockExecAsync.mockResolvedValue({
+            stdout: `worktree ${process.cwd()}\nbranch refs/heads/main\n\n`,
+            stderr: "",
+          });
 
           await expect(removeWorkTree("main")).rejects.toThrow(
             "Cannot remove main work tree",
@@ -350,20 +332,13 @@ branch refs/heads/feature
         });
 
         it("should handle git command failures", async () => {
-          // Mock listWorkTrees to return a valid worktree
-
-          const { promisify } = await import("util");
-          const mockExecAsync = vi.fn();
-
-          // First call (listWorkTrees) succeeds, second call (remove) fails
           mockExecAsync
             .mockResolvedValueOnce({
               stdout:
                 "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
+              stderr: "",
             })
             .mockRejectedValueOnce(new Error("git worktree remove failed"));
-
-          vi.mocked(promisify).mockReturnValue(mockExecAsync);
 
           await expect(removeWorkTree("test-branch")).rejects.toThrow(
             "Failed to remove work tree",
@@ -373,90 +348,123 @@ branch refs/heads/feature
 
       describe("successful removal", () => {
         it("should remove work tree by name", async () => {
-          // Mock listWorkTrees and successful removal
-          const { promisify } = await import("util");
-          const mockExecAsync = vi.fn();
-
           mockExecAsync
+            // listWorkTrees call
             .mockResolvedValueOnce({
               stdout:
                 "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
+              stderr: "",
             })
-            .mockResolvedValueOnce({ stdout: "success" });
+            // git worktree prune (first call)
+            .mockResolvedValueOnce({ stdout: "", stderr: "" })
+            // git worktree list --porcelain (for validation)
+            .mockResolvedValueOnce({
+              stdout:
+                "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
+              stderr: "",
+            })
+            // git worktree remove
+            .mockResolvedValueOnce({ stdout: "success", stderr: "" })
+            // git worktree prune (after removal)
+            .mockResolvedValueOnce({ stdout: "", stderr: "" });
 
-          vi.mocked(promisify).mockReturnValue(mockExecAsync);
-
-          // Should not throw
           await expect(removeWorkTree("test-branch")).resolves.toBeUndefined();
         });
 
         it("should clean up work tree directory", async () => {
-          // Mock successful removal and metadata cleanup
-          const { promisify } = await import("util");
-          const mockExecAsync = vi.fn();
-
           mockExecAsync
+            // listWorkTrees call
             .mockResolvedValueOnce({
               stdout:
                 "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
+              stderr: "",
             })
-            .mockResolvedValueOnce({ stdout: "success" });
+            // git worktree prune (first call)
+            .mockResolvedValueOnce({ stdout: "", stderr: "" })
+            // git worktree list --porcelain (for validation)
+            .mockResolvedValueOnce({
+              stdout:
+                "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
+              stderr: "",
+            })
+            // git worktree remove
+            .mockResolvedValueOnce({ stdout: "success", stderr: "" })
+            // git worktree prune (after removal)
+            .mockResolvedValueOnce({ stdout: "", stderr: "" });
 
-          vi.mocked(promisify).mockReturnValue(mockExecAsync);
-
-          // Mock fs operations for metadata cleanup
-          mockFs.access.mockResolvedValue(undefined); // metadata dir exists
-          mockFs.rm.mockResolvedValue(undefined); // cleanup succeeds
+          mockFs.access.mockResolvedValue(undefined);
+          mockFs.rm.mockResolvedValue(undefined);
 
           await removeWorkTree("test-branch");
 
-          // Verify that metadata cleanup was attempted
           expect(mockFs.rm).toHaveBeenCalled();
         });
 
         it("should force remove if directory is locked", async () => {
-          // Mock listWorkTrees and locked directory scenario
-          const { promisify } = await import("util");
-          const mockExecAsync = vi.fn();
-
+          const worktreePath = "/path/to/test-branch";
           mockExecAsync
+            // listWorkTrees call
             .mockResolvedValueOnce({
-              stdout:
-                "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
+              stdout: `worktree ${worktreePath}\nbranch refs/heads/test\n\n`,
+              stderr: "",
             })
-            .mockRejectedValueOnce(new Error("worktree locked")) // normal removal fails
-            .mockResolvedValueOnce({ stdout: "force removal success" }); // force removal succeeds
+            // git worktree prune (first call)
+            .mockResolvedValueOnce({ stdout: "", stderr: "" })
+            // git worktree list --porcelain (for validation)
+            .mockResolvedValueOnce({
+              stdout: `worktree ${worktreePath}\nbranch refs/heads/test\n\n`,
+              stderr: "",
+            })
+            // git worktree remove (fails with locked error)
+            .mockRejectedValueOnce(new Error("worktree locked"))
+            // git worktree prune (before force removal)
+            .mockResolvedValueOnce({ stdout: "", stderr: "" })
+            // git worktree list --porcelain (for force validation)
+            .mockResolvedValueOnce({
+              stdout: `worktree ${worktreePath}\nbranch refs/heads/test\n\n`,
+              stderr: "",
+            })
+            // git worktree remove --force (succeeds)
+            .mockResolvedValueOnce({
+              stdout: "force removal success",
+              stderr: "",
+            })
+            // git worktree prune (after removal)
+            .mockResolvedValueOnce({ stdout: "", stderr: "" });
 
-          vi.mocked(promisify).mockReturnValue(mockExecAsync);
-
-          // Should succeed after force removal
           await expect(
             removeWorkTree("test-branch", true),
           ).resolves.toBeUndefined();
 
-          // Verify force removal was attempted
-          expect(mockExecAsync).toHaveBeenCalledTimes(3); // list + normal remove + force remove
+          expect(mockExecAsync).toHaveBeenCalledTimes(8);
         });
 
         it("should update work tree registry after removal", async () => {
-          // Mock successful removal
-          const { promisify } = await import("util");
-          const mockExecAsync = vi.fn();
-
           mockExecAsync
+            // listWorkTrees call
             .mockResolvedValueOnce({
               stdout:
                 "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
+              stderr: "",
             })
-            .mockResolvedValueOnce({ stdout: "success" });
-
-          vi.mocked(promisify).mockReturnValue(mockExecAsync);
+            // git worktree prune (first call)
+            .mockResolvedValueOnce({ stdout: "", stderr: "" })
+            // git worktree list --porcelain (for validation)
+            .mockResolvedValueOnce({
+              stdout:
+                "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
+              stderr: "",
+            })
+            // git worktree remove
+            .mockResolvedValueOnce({ stdout: "success", stderr: "" })
+            // git worktree prune (after removal)
+            .mockResolvedValueOnce({ stdout: "", stderr: "" });
 
           await removeWorkTree("test-branch");
 
-          // Verify git worktree remove command was called
           expect(mockExecAsync).toHaveBeenCalledWith(
             expect.stringContaining("git worktree remove"),
+            expect.any(Object),
           );
         });
       });

@@ -160,6 +160,44 @@ export const worktreeChanges = {
           }),
         );
 
+        // Handle push if requested first
+        let pushMessage = "";
+
+        if (push_changes) {
+          // Push changes for all worktrees that have uncommitted changes
+          const worktreesToPush = worktreeChanges.filter(
+            (wt) => !("error" in wt) && wt.uncommittedCount > 0,
+          );
+
+          const pushedWorktrees: string[] = [];
+          const failedWorktrees: string[] = [];
+
+          for (const wt of worktreesToPush) {
+            if (!("error" in wt)) {
+              try {
+                await autoCommitManager.forceCommit(wt.path);
+                pushedWorktrees.push(wt.name);
+              } catch (error) {
+                console.warn(
+                  `Warning: Failed to push changes for ${wt.name}: ${error}`,
+                );
+                failedWorktrees.push(wt.name);
+              }
+            }
+          }
+
+          if (pushedWorktrees.length > 0) {
+            pushMessage = `✅ Successfully committed and pushed changes for ${pushedWorktrees.length} worktree${pushedWorktrees.length !== 1 ? "s" : ""}: ${pushedWorktrees.join(", ")}\n\n`;
+          } else {
+            pushMessage =
+              "💡 No worktrees had uncommitted changes to push.\n\n";
+          }
+
+          if (failedWorktrees.length > 0) {
+            pushMessage += `❌ Failed to push changes for ${failedWorktrees.length} worktree${failedWorktrees.length !== 1 ? "s" : ""}: ${failedWorktrees.join(", ")}\n\n`;
+          }
+        }
+
         // Separate cwd, main tree, and other worktrees
         const cwdTree = worktreeChanges.find((wt) => wt.isCwd);
         const mainTree = worktreeChanges.find(
@@ -216,14 +254,19 @@ export const worktreeChanges = {
           .filter(Boolean)
           .join("\n\n");
 
+        const helpMessage = push_changes
+          ? `\n💡 Use \`worktree_identifier\` to see detailed changes for a specific worktree.`
+          : `\n💡 Use \`worktree_identifier\` to see detailed changes for a specific worktree.\n💡 Use \`-p\` flag to commit and push pending changes.`;
+
         return {
           content: [
             {
               type: "text",
               text:
+                pushMessage +
                 `📊 All Worktree Changes (${worktreeChanges.length} worktrees)\n\n` +
                 worktreeList +
-                `\n\n💡 Use \`worktree_identifier\` to see detailed changes for a specific worktree.`,
+                helpMessage,
             },
           ],
         };
@@ -244,7 +287,7 @@ export const worktreeChanges = {
               text: `❌ Worktree '${targetIdentifier}' not found.\n\nAvailable worktrees:\n${worktrees
                 .map((ws) => {
                   if (ws.metadata) {
-                    return `• ${ws.metadata.worktree.name} (${ws.metadata.worktree.id})`;
+                    return `• ${ws.metadata.worktree.name} (${ws.metadata.worktree.id}) - branch: ${ws.metadata.worktree.branch}`;
                   } else {
                     // Fallback to path-based identifier for worktrees without metadata
                     const pathParts = ws.worktreePath.split("/");
@@ -252,7 +295,7 @@ export const worktreeChanges = {
                     return `• ${folderName} (no metadata) - ${ws.worktreePath}`;
                   }
                 })
-                .join("\n")}`,
+                .join("\n")}\n\n💡 You can use worktree name, task ID, or branch name to identify worktrees.`,
             },
           ],
         };
