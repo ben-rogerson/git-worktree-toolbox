@@ -423,6 +423,282 @@ export const archiveWorktree = {
 } satisfies McpTool;
 
 // ============================================================================
+// Tool: Clean Workspaces
+// ============================================================================
+
+export const cleanWorktrees = {
+  name: "clean",
+  description:
+    "Archive all worktrees that don't have any changes compared to their base branch",
+  cli: {
+    aliases: ["clean"],
+    flags: [
+      {
+        param: "git_repo_path",
+        alias: "p",
+        description: "Git repository path (optional)",
+      },
+      {
+        param: "dry_run",
+        alias: "d",
+        description: "Show what would be archived without actually archiving",
+      },
+    ],
+  },
+  parameters: (z) => ({
+    git_repo_path: sharedParameters.git_repo_path_optional(z),
+    dry_run: z
+      .boolean()
+      .optional()
+      .describe("Show what would be archived without actually archiving"),
+  }),
+  cb: async (
+    args: Record<string, unknown>,
+    { worktreeManager }: { worktreeManager: WorktreeManager },
+  ) => {
+    const { git_repo_path, dry_run } = args as {
+      git_repo_path?: string;
+      dry_run?: boolean;
+    };
+
+    const result = await assertGitRepoPath(git_repo_path);
+    if (result) {
+      return result;
+    }
+
+    try {
+      // Get all worktrees
+      const worktrees =
+        await WorktreeMetadataManager.listAllWorktrees(git_repo_path);
+
+      if (worktrees.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "No worktrees found to clean.",
+            },
+          ],
+        };
+      }
+
+      const workspacesToArchive: Array<{
+        worktreePath: string;
+        metadata: any;
+        reason: string;
+      }> = [];
+      const workspacesWithChanges: Array<{
+        worktreePath: string;
+        metadata: any;
+        reason: string;
+      }> = [];
+      const errors: Array<{
+        worktreePath: string;
+        error: string;
+      }> = [];
+
+      // Check each worktree for changes
+      for (const worktree of worktrees) {
+        // First check if this is the main workspace (main/master branch)
+        let isMainWorkspace = false;
+        try {
+          const currentBranch = await gitCurrentBranch({
+            cwd: worktree.worktreePath,
+          });
+          isMainWorkspace =
+            currentBranch === "main" || currentBranch === "master";
+        } catch (error) {
+          // If we can't determine the branch, be conservative and don't archive
+          console.warn(
+            `Could not determine branch for ${worktree.worktreePath}: ${error}`,
+          );
+        }
+
+        if (isMainWorkspace) {
+          workspacesWithChanges.push({
+            worktreePath: worktree.worktreePath,
+            metadata: worktree.metadata,
+            reason: "main workspace (main/master branch) - never archived",
+          });
+          continue;
+        }
+
+        if (!worktree.metadata) {
+          workspacesToArchive.push({
+            worktreePath: worktree.worktreePath,
+            metadata: null,
+            reason: "no metadata",
+          });
+          continue;
+        }
+
+        try {
+          // Check if worktree has pending changes
+          const hasPendingChanges = await gitHasPendingChanges({
+            cwd: worktree.worktreePath,
+          });
+
+          if (hasPendingChanges) {
+            workspacesWithChanges.push({
+              worktreePath: worktree.worktreePath,
+              metadata: worktree.metadata,
+              reason: "has uncommitted changes",
+            });
+            continue;
+          }
+
+          // Check if worktree has committed changes compared to base branch
+          const baseBranch = worktree.metadata.git_info?.base_branch || "main";
+          let hasCommittedChanges = false;
+
+          try {
+            // Try to get diff stats from base branch
+            const { gitDiffStats } = await import("@/src/utils/git");
+            const diffStats = await gitDiffStats(baseBranch, "HEAD", {
+              cwd: worktree.worktreePath,
+            });
+            hasCommittedChanges = diffStats.files > 0;
+          } catch (error) {
+            // If diff fails, try origin/baseBranch
+            try {
+              const { gitDiffStats } = await import("@/src/utils/git");
+              const diffStats = await gitDiffStats(
+                `origin/${baseBranch}`,
+                "HEAD",
+                {
+                  cwd: worktree.worktreePath,
+                },
+              );
+              hasCommittedChanges = diffStats.files > 0;
+            } catch (originError) {
+              // If both fail, assume no changes (conservative approach)
+              hasCommittedChanges = false;
+            }
+          }
+
+          if (hasCommittedChanges) {
+            workspacesWithChanges.push({
+              worktreePath: worktree.worktreePath,
+              metadata: worktree.metadata,
+              reason: "has committed changes",
+            });
+          } else {
+            workspacesToArchive.push({
+              worktreePath: worktree.worktreePath,
+              metadata: worktree.metadata,
+              reason: "no changes compared to base branch",
+            });
+          }
+        } catch (error) {
+          errors.push({
+            worktreePath: worktree.worktreePath,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      }
+
+      // Build response text
+      let responseText = `🧹 Workspace Cleanup Analysis\n\n`;
+      responseText += `Total worktrees found: ${worktrees.length}\n`;
+      responseText += `Workspaces to archive: ${workspacesToArchive.length}\n`;
+      responseText += `Workspaces with changes: ${workspacesWithChanges.length}\n`;
+      responseText += `Errors: ${errors.length}\n\n`;
+
+      if (workspacesToArchive.length > 0) {
+        responseText += `📦 Workspaces to Archive:\n`;
+        for (const ws of workspacesToArchive) {
+          const name =
+            ws.metadata?.worktree?.name || path.basename(ws.worktreePath);
+          responseText += `  • ${name} - ${ws.reason}\n`;
+        }
+        responseText += `\n`;
+      }
+
+      if (workspacesWithChanges.length > 0) {
+        responseText += `⚠️  Workspaces with Changes (preserved):\n`;
+        for (const ws of workspacesWithChanges) {
+          const name =
+            ws.metadata?.worktree?.name || path.basename(ws.worktreePath);
+          responseText += `  • ${name} - ${ws.reason}\n`;
+        }
+        responseText += `\n`;
+      }
+
+      if (errors.length > 0) {
+        responseText += `❌ Errors:\n`;
+        for (const error of errors) {
+          const name = path.basename(error.worktreePath);
+          responseText += `  • ${name} - ${error.error}\n`;
+        }
+        responseText += `\n`;
+      }
+
+      // Perform archiving if not dry run
+      if (!dry_run && workspacesToArchive.length > 0) {
+        responseText += `🔄 Archiving workspaces...\n\n`;
+
+        const archiveResults: Array<{
+          name: string;
+          success: boolean;
+          error?: string;
+        }> = [];
+
+        for (const ws of workspacesToArchive) {
+          const name =
+            ws.metadata?.worktree?.name || path.basename(ws.worktreePath);
+          try {
+            await worktreeManager.archiveWorktreeByPathOrTaskId(
+              ws.worktreePath,
+            );
+            archiveResults.push({ name, success: true });
+          } catch (error) {
+            archiveResults.push({
+              name,
+              success: false,
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
+          }
+        }
+
+        const successful = archiveResults.filter((r) => r.success).length;
+        const failed = archiveResults.filter((r) => !r.success).length;
+
+        responseText += `✅ Successfully archived: ${successful}\n`;
+        if (failed > 0) {
+          responseText += `❌ Failed to archive: ${failed}\n`;
+          for (const result of archiveResults.filter((r) => !r.success)) {
+            responseText += `  • ${result.name} - ${result.error}\n`;
+          }
+        }
+      } else if (dry_run) {
+        responseText += `🔍 Dry run mode - no workspaces were actually archived.\n`;
+        responseText += `Run without --dry_run to perform the cleanup.\n`;
+      } else {
+        responseText += `✨ All workspaces are clean - nothing to archive!\n`;
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: responseText,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `❌ Failed to clean workspaces: ${error instanceof Error ? error.message : "Unknown error"}`,
+          },
+        ],
+      };
+    }
+  },
+} satisfies McpTool;
+
+// ============================================================================
 // Tool: Launch Worktree
 // ============================================================================
 

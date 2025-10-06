@@ -15,6 +15,7 @@ import {
   archiveWorktree,
   launchWorktree,
   doctorWorktrees,
+  cleanWorktrees,
 } from "./worktree-lifecycle.js";
 
 // Worktree Changes Tools
@@ -39,6 +40,7 @@ export const tools = [
   createTaskWorktree,
   worktreeChanges,
   archiveWorktree,
+  cleanWorktrees,
   doctorWorktrees,
   // Integration
   generateMrLink,

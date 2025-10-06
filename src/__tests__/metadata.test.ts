@@ -99,20 +99,29 @@ describe("WorktreeMetadataManager", () => {
       expect(result).toBeNull();
     });
 
-    it("should throw error for corrupted YAML", async () => {
+    it("should repair corrupted YAML and return repaired metadata", async () => {
       mockFs.readFileSync.mockReturnValue("invalid: yaml: {{{{");
 
-      await expect(
-        WorktreeMetadataManager.loadMetadata(testWorktreePath),
-      ).rejects.toThrow("Failed to parse metadata");
+      const result =
+        await WorktreeMetadataManager.loadMetadata(testWorktreePath);
+
+      // Should return null when repair fails for severely corrupted YAML
+      expect(result).toBeNull();
     });
 
-    it("should throw error for invalid schema", async () => {
+    it("should repair invalid schema and return repaired metadata", async () => {
       mockFs.readFileSync.mockReturnValue(yaml.dump({ invalid: "structure" }));
 
-      await expect(
-        WorktreeMetadataManager.loadMetadata(testWorktreePath),
-      ).rejects.toThrow("Failed to parse metadata");
+      const result =
+        await WorktreeMetadataManager.loadMetadata(testWorktreePath);
+
+      // Should return repaired metadata when schema is invalid but repairable
+      expect(result).not.toBeNull();
+      expect(result).toHaveProperty("worktree");
+      expect(result).toHaveProperty("team");
+      expect(result).toHaveProperty("conversation_history");
+      expect(result).toHaveProperty("auto_commit");
+      expect(result).toHaveProperty("git_info");
     });
   });
 

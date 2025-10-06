@@ -207,8 +207,7 @@ function discoverProjects(customDirectories?: string[]): DiscoveredProject[] {
 
 export const listProjects = {
   name: "list",
-  description:
-    "Discover all git repositories across project directories (set with PROJECT_DIRECTORIES env variable).",
+  description: "Show git repositories with worktrees",
   cli: {
     aliases: ["list"],
     flags: [],
@@ -275,14 +274,13 @@ export const listProjects = {
                 `Scanned directories:\n` +
                 scannedDirs.map((dir) => `  • ${dir}`).join("\n") +
                 `\n\nNo git repositories were found in these locations.\n\n` +
-                `💡 To scan additional directories, configure the \`project_directories\` option in your MCP server config.`,
+                `💡 Customize the project directories with this env var:\n\`export PROJECT_DIRECTORIES=~/Users/ben/Projects:~/Users/ben/Work\`.`,
             },
           ],
         };
       }
 
       const projectsWithWorktrees = projects.filter((p) => p.hasWorktrees);
-      const projectsWithoutWorktrees = projects.filter((p) => !p.hasWorktrees);
 
       let text: string;
       if (ownerRepo) {
@@ -294,6 +292,7 @@ export const listProjects = {
         text = `📂 Discovered Projects (${projects.length} total)\n\n`;
         text += `Scanned directories:\n`;
         text += scannedDirs.map((dir) => `  • ${dir}`).join("\n") + "\n\n";
+        text += `💡 Customize the project directories with this env var:\n\`export PROJECT_DIRECTORIES=~/Users/ben/Projects:~/Users/ben/Work\`.\n\n`;
       }
 
       if (projectsWithWorktrees.length > 0) {
@@ -333,15 +332,8 @@ export const listProjects = {
           }
         }
         text += "\n";
-      }
-
-      if (projectsWithoutWorktrees.length > 0) {
-        text += `Projects without worktrees (${projectsWithoutWorktrees.length}):\n`;
-        for (const project of projectsWithoutWorktrees) {
-          text += `  📦 ${project.name}\n`;
-          text += `     • Path: ${project.path}\n`;
-        }
-        text += "\n";
+      } else {
+        text += `No projects with worktrees found.\n\n`;
       }
 
       text += `💡 Use the "changes" tool to see existing worktrees.\n`;
