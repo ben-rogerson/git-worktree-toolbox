@@ -5,10 +5,21 @@ import { z, type ZodType } from "zod";
 
 type ZodNamespace = typeof z;
 
+export type CliFlagDefinition = {
+  param: string;
+  alias: string;
+  description: string;
+};
+
+export type CliConfig = {
+  aliases?: string[];
+  flags?: CliFlagDefinition[];
+};
+
 export type McpTool = {
   name: string;
   description: string;
-  aliases?: string[];
+  cli?: CliConfig;
   parameters: (z: ZodNamespace) => Record<string, ZodType>;
   cb: (
     args: Record<string, unknown>,

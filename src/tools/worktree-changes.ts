@@ -20,7 +20,17 @@ export const worktreeChanges = {
   name: "changes",
   description:
     "Show all changes in a worktree or current repo. Optionally commit and push changes.",
-  aliases: ["changes"],
+  cli: {
+    aliases: ["changes"],
+    flags: [
+      {
+        param: "worktree_identifier",
+        alias: "i",
+        description: "Worktree identifier",
+      },
+      { param: "push_changes", alias: "c", description: "Commit and push" },
+    ],
+  },
   parameters: (z) => ({
     worktree_identifier: z
       .string()
@@ -231,7 +241,14 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
   name: "grab",
   description:
     "Merge all changes from another worktree into the current worktree",
-  aliases: ["grab"],
+  cli: {
+    aliases: ["grab"],
+    flags: [
+      { param: "worktree_name", alias: "n", description: "Worktree name" },
+      { param: "git_repo_path", alias: "p", description: "Git repo path" },
+      { param: "avoid_dry_run", alias: "f", description: "Force (avoid dry run)" },
+    ],
+  },
   parameters: (z) => ({
     worktree_name: sharedParameters.worktree_name(z),
     git_repo_path: sharedParameters.git_repo_path_optional(z),

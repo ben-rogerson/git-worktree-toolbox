@@ -32,7 +32,15 @@ import {
 export const createTaskWorktree = {
   name: "create",
   description: "Create a new worktree with matching branch",
-  aliases: ["new", "create"],
+  cli: {
+    aliases: ["new", "create"],
+    flags: [
+      { param: "task_description", alias: "d", description: "Task description" },
+      { param: "git_repo_path", alias: "p", description: "Git repo path" },
+      { param: "user_id", alias: "u", description: "User ID" },
+      { param: "base_branch", alias: "b", description: "Base branch" },
+    ],
+  },
   parameters: (z) => ({
     task_description: z
       .string()
@@ -128,7 +136,17 @@ export const createTaskWorktree = {
 export const archiveWorktree = {
   name: "archive",
   description: "Archive a worktree and its matching branch",
-  aliases: ["archive"],
+  cli: {
+    aliases: ["archive"],
+    flags: [
+      {
+        param: "worktree_identifier",
+        alias: "i",
+        description: "Worktree identifier",
+      },
+      { param: "has_branch_removal", alias: "r", description: "Remove branch" },
+    ],
+  },
   parameters: (z) => ({
     worktree_identifier: sharedParameters.worktree_identifier(z),
     has_branch_removal: z
@@ -389,7 +407,18 @@ export const archiveWorktree = {
 export const launchWorktree = {
   name: "go",
   description: "Open worktree in editor/terminal",
-  aliases: ["go"],
+  cli: {
+    aliases: ["go"],
+    flags: [
+      {
+        param: "worktree_identifier",
+        alias: "i",
+        description: "Worktree identifier",
+      },
+      { param: "git_repo_path", alias: "p", description: "Git repo path" },
+      { param: "editor", alias: "e", description: "Editor to use" },
+    ],
+  },
   parameters: (z) => ({
     worktree_identifier: sharedParameters.worktree_identifier(z),
     git_repo_path: sharedParameters.git_repo_path_optional(z),
@@ -539,7 +568,10 @@ export const doctorWorktrees = {
   name: "doctor",
   description:
     "Check all worktrees and initialize missing metadata. Run this to ensure all worktrees have proper metadata.",
-  aliases: ["doctor"],
+  cli: {
+    aliases: ["doctor"],
+    flags: [{ param: "git_repo_path", alias: "p", description: "Git repo path" }],
+  },
   parameters: (z) => ({
     git_repo_path: sharedParameters.git_repo_path_optional(z),
   }),

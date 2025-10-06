@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { parseArgs, buildToolAliases } from "./cli-parser.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,37 +21,6 @@ async function loadWorktreeTools() {
     console.error("Error loading tools:", error);
     throw error;
   }
-}
-
-function parseArgs(): {
-  mode: "server" | "version" | "help" | "tool";
-  toolName?: string;
-  toolArgs?: Record<string, unknown>;
-} {
-  const args = process.argv.slice(2);
-
-  if (args.length === 0) {
-    return { mode: "server" };
-  }
-
-  const firstArg = args[0];
-
-  // Check for version flag
-  if (firstArg === "--version" || firstArg === "-v") {
-    return { mode: "version" };
-  }
-
-  // Check for help flag
-  if (firstArg === "--help" || firstArg === "-h") {
-    return { mode: "help" };
-  }
-
-  // Direct tool call
-  return {
-    mode: "tool",
-    toolName: firstArg,
-    toolArgs: args[1] ? JSON.parse(args[1]) : {},
-  };
 }
 
 async function runServer() {
@@ -86,22 +56,6 @@ async function runServer() {
   );
 }
 
-function buildToolAliases(
-  tools: { name: string; aliases?: string[] }[],
-): Record<string, string> {
-  const aliases: Record<string, string> = {};
-
-  for (const tool of tools) {
-    if (tool.aliases) {
-      for (const alias of tool.aliases) {
-        aliases[alias] = tool.name;
-      }
-    }
-  }
-
-  return aliases;
-}
-
 async function runTool(
   toolName: string,
   toolArgs: Record<string, unknown>,
@@ -127,11 +81,20 @@ async function runTool(
   }
 
   const result = await tool.cb(toolArgs, { worktreeManager });
-  console.log(JSON.stringify(result, null, 2));
+
+  // Extract and print just the text from the response
+  if (result.content && result.content.length > 0) {
+    for (const item of result.content) {
+      if (item.type === "text" && item.text) {
+        console.log(item.text);
+      }
+    }
+  }
 }
 
 async function main() {
-  const parsed = parseArgs();
+  const worktreeTools = await loadWorktreeTools();
+  const parsed = await parseArgs(process.argv.slice(2), worktreeTools.tools);
 
   switch (parsed.mode) {
     case "version":
@@ -140,7 +103,6 @@ async function main() {
       break;
 
     case "help": {
-      const worktreeTools = await loadWorktreeTools();
       const TOOL_ALIASES = buildToolAliases(worktreeTools.tools);
       console.log(`🌳 Git Worktree Toolbox ${packageJson.version} CLI\n`);
       console.log("Usage:");
@@ -150,7 +112,7 @@ async function main() {
       console.log("  gwtree --version, -v            Show version");
       console.log("  gwtree --help, -h               Show this help");
       console.log(
-        "  gwtree [tool] [args]            Run tool directly (args as JSON)\n",
+        "  gwtree [tool] [flags]           Run tool with flags\n",
       );
       console.log("🛠️  Available tools:\n");
 
@@ -167,7 +129,17 @@ async function main() {
         const aliases = aliasMap.get(tool.name);
         const aliasText = aliases ? ` (${aliases.join(", ")})` : "";
         console.log(`  ${tool.name}${aliasText}`);
-        console.log(`    ${tool.description}\n`);
+        console.log(`    ${tool.description}`);
+
+        if (tool.cli?.flags && tool.cli.flags.length > 0) {
+          console.log(`    Flags:`);
+          for (const flag of tool.cli.flags) {
+            console.log(
+              `      -${flag.alias}, --${flag.param}  ${flag.description}`,
+            );
+          }
+        }
+        console.log("");
       }
       process.exit(0);
       break;

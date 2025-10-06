@@ -23,12 +23,49 @@ Each task runs in its own sandbox—experiment, so you can break things or pivot
 - `mr` - Supply the MR/PR creation link
 - `grab` - Merge changes from another worktree
 
-### Available CLI Tools
+### CLI Usage
 
-- `gwtree` - Start the MCP server
-- `gwtree --help` - Show help
-- `gwtree --version` - Show version
-- `gwtree [tool] [args]` - Run tool directly
+Use the `gwtree` CLI to run tools directly:
+
+```bash
+# Create a new worktree
+gwtree create -d "Fix login bug" -b login-fix
+
+# Archive a worktree (with branch removal)
+gwtree archive -i task-abc123 -r
+
+# Open worktree in editor
+gwtree go -i task-abc123 -e cursor
+
+# Show changes and commit/push
+gwtree changes -i task-abc123
+# Commit/push the changes
+gwtree changes -i task-abc123 -c
+
+# Merge changes from another worktree
+gwtree grab -n feature-branch -f
+
+# Generate MR link
+gwtree mr -t task-abc123
+
+# List all projects
+gwtree list
+
+# Check worktree health
+gwtree doctor
+
+# Show help
+gwtree --help
+
+# Show version
+gwtree --version
+```
+
+**Positional arguments**: The first string flag can be provided without the flag name:
+
+```bash
+gwtree create "Fix login bug"  # Same as: gwtree create -d "Fix login bug"
+```
 
 ## Get Started
 

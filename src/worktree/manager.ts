@@ -133,23 +133,6 @@ export class WorktreeManager {
     return result;
   }
 
-  async archiveWorktreeByTaskId(taskId: string): Promise<void> {
-    const worktree = await this.getWorktreeByTaskId(taskId);
-    if (!worktree) {
-      throw new Error(`No worktree found for task ${taskId}`);
-    }
-
-    // Update metadata status
-    const metadata = worktree.metadata;
-    metadata.worktree.status = "archived";
-    await WorktreeMetadataManager.saveMetadata(worktree.worktreePath, metadata);
-
-    // Clean up Claude configuration
-    await WorktreeClaudeConfigGenerator.removeWorktreeConfig(
-      worktree.metadata.worktree.name,
-    );
-  }
-
   async archiveWorktreeByPathOrTaskId(pathOrTaskId: string): Promise<void> {
     const worktree = await this.getWorktreeByPathOrTaskId(pathOrTaskId);
     if (!worktree) {
@@ -170,6 +153,9 @@ export class WorktreeManager {
   async generateMRLinkByTaskId(taskId: string): Promise<string> {
     const worktree = await this.getWorktreeByTaskId(taskId);
     if (!worktree) {
+      if (!taskId) {
+        throw new Error("No task ID provided");
+      }
       throw new Error(`No worktree found for task ${taskId}`);
     }
 

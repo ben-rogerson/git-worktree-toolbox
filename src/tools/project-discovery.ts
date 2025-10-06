@@ -207,7 +207,10 @@ export const listProjects = {
   name: "list",
   description:
     "Discover all git repositories across project directories (set with PROJECT_DIRECTORIES env variable).",
-  aliases: ["list"],
+  cli: {
+    aliases: ["list"],
+    flags: [],
+  },
   parameters: () => ({}),
   cb: async (
     _args: Record<string, unknown>,
@@ -304,7 +307,10 @@ export const listProjects = {
 export const generateMrLink = {
   name: "mr",
   description: "Generate a merge request link for a worktree",
-  aliases: ["mr"],
+  cli: {
+    aliases: ["mr"],
+    flags: [{ param: "task_id", alias: "t", description: "Task ID" }],
+  },
   parameters: (z) => ({
     task_id: z.string().describe("Task ID of the worktree"),
   }),
