@@ -300,6 +300,36 @@ export const listProjects = {
         for (const project of projectsWithWorktrees) {
           text += `  ✅ ${project.name}\n`;
           text += `     • Path: ${project.path}\n`;
+
+          // Get and display worktrees for this project
+          try {
+            const worktrees = await WorktreeMetadataManager.listAllWorktrees(
+              project.path,
+            );
+            if (worktrees.length > 0) {
+              text += `     • Worktrees (${worktrees.length}):\n`;
+              for (const wt of worktrees) {
+                if (wt.metadata) {
+                  const labels = [];
+                  if (wt.worktreePath === process.cwd()) labels.push("current");
+                  const labelSuffix =
+                    labels.length > 0 ? ` (${labels.join(", ")})` : "";
+                  text += `       - ${wt.metadata.worktree.name}${labelSuffix} (${wt.metadata.worktree.branch})\n`;
+                } else {
+                  // Fallback for worktrees without metadata
+                  const pathParts = wt.worktreePath.split("/");
+                  const folderName = pathParts[pathParts.length - 1];
+                  const labels = [];
+                  if (wt.worktreePath === process.cwd()) labels.push("current");
+                  const labelSuffix =
+                    labels.length > 0 ? ` (${labels.join(", ")})` : "";
+                  text += `       - ${folderName}${labelSuffix} (no metadata)\n`;
+                }
+              }
+            }
+          } catch (error) {
+            text += `     • Error loading worktrees: ${error instanceof Error ? error.message : "Unknown error"}\n`;
+          }
         }
         text += "\n";
       }

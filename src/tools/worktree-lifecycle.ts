@@ -35,7 +35,11 @@ export const createTaskWorktree = {
   cli: {
     aliases: ["new", "create"],
     flags: [
-      { param: "task_description", alias: "d", description: "Task description" },
+      {
+        param: "task_description",
+        alias: "d",
+        description: "Task description",
+      },
       { param: "git_repo_path", alias: "p", description: "Git repo path" },
       { param: "user_id", alias: "u", description: "User ID" },
       { param: "base_branch", alias: "b", description: "Base branch" },
@@ -161,6 +165,19 @@ export const archiveWorktree = {
       worktree_identifier: string;
       has_branch_removal?: boolean;
     };
+
+    // Validate required parameter
+    if (!worktree_identifier || typeof worktree_identifier !== "string") {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "❌ Error: worktree_identifier is required. Please provide a worktree identifier.\n\nUsage: gwtree archive -i <worktree_identifier> [--has_branch_removal]\n\nExample: gwtree archive -i task-abc123",
+          },
+        ],
+      };
+    }
+
     const id = worktree_identifier.trim();
     try {
       const worktree = await worktreeManager.getWorktreeByPathOrTaskId(id);
@@ -571,7 +588,9 @@ export const doctorWorktrees = {
     "Check all worktrees and initialize missing metadata. Run this to ensure all worktrees have proper metadata.",
   cli: {
     aliases: ["doctor"],
-    flags: [{ param: "git_repo_path", alias: "p", description: "Git repo path" }],
+    flags: [
+      { param: "git_repo_path", alias: "p", description: "Git repo path" },
+    ],
   },
   parameters: (z) => ({
     git_repo_path: sharedParameters.git_repo_path_optional(z),
