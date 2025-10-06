@@ -12,6 +12,7 @@
 export interface WorktreeInfo {
   id: string;
   name: string;
+  path: string;
   branch: string;
   created_at?: string;
   created_by: string;

@@ -297,6 +297,11 @@ export const archiveWorktree = {
           }
         }
 
+        // Delete metadata if worktree was removed successfully
+        if (worktreeRemoved) {
+          WorktreeMetadataManager.deleteMetadata(worktree.worktreePath);
+        }
+
         // Remove branch if requested and worktree was removed successfully
         if (has_branch_removal && worktreeRemoved) {
           try {

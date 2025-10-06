@@ -9,64 +9,97 @@
  * - Team member management (owners, collaborators)
  * - Git information tracking (base branch, current branch)
  *
- * Metadata is stored in .git/gwtree/task.config.yaml for each worktree.
+ * Metadata is stored centrally at ~/.gwtree/metadata/<hash>/task.config.yaml
+ * where <hash> is a SHA256 of the absolute worktree path.
  * All operations include Zod validation for type safety.
  */
 
 import z from "zod";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import * as yaml from "js-yaml";
 import { v4 as uuidv4 } from "uuid";
+import * as crypto from "crypto";
 import {
   ensureDirectorySync,
   writeFileWithDirectorySync,
 } from "@/src/utils/fs";
 import { gitWorktreeList } from "@/src/utils/git";
-import { METADATA_DIR } from "@/src/utils/constants";
 import {
   WorktreeMetadata,
   ConversationEntry,
   CreateWorktreeOptions,
 } from "@/src/worktree/types";
 
+const WORKTREE_METADATA_SCHEMA = z.object({
+  worktree: z.object({
+    id: z.string(),
+    name: z.string(),
+    path: z.string(),
+    branch: z.string(),
+    created_at: z.string(),
+    created_by: z.string(),
+    status: z.enum(["active", "completed", "archived"]),
+  }),
+  team: z.object({
+    assigned_users: z.array(
+      z.object({
+        user_id: z.string(),
+        role: z.enum(["owner", "collaborator"]),
+        joined_at: z.string(),
+      }),
+    ),
+  }),
+  conversation_history: z.array(
+    z.object({
+      id: z.string(),
+      timestamp: z.string(),
+      user_id: z.string().optional(),
+      prompt: z.string(),
+      claude_response: z.string(),
+    }),
+  ),
+  auto_commit: z.object({
+    enabled: z.boolean(),
+    last_commit: z.string().nullable(),
+    pending_changes: z.number(),
+    queue_size: z.number(),
+  }),
+  git_info: z.object({
+    base_branch: z.string(),
+    current_branch: z.string(),
+  }),
+});
+
 export class WorktreeMetadataManager {
   private static readonly METADATA_FILE = "task.config.yaml";
+  private static readonly METADATA_ROOT = path.join(
+    os.homedir(),
+    ".gwtree",
+    "metadata",
+  );
 
-  private static async getWorktreeGitDir(
-    worktreePath: string,
-  ): Promise<string> {
-    const gitFile = path.join(worktreePath, ".git");
-
-    if (fs.existsSync(gitFile)) {
-      const stats = fs.statSync(gitFile);
-
-      if (stats.isFile()) {
-        // Read the gitdir from the .git file
-        const gitContent = fs.readFileSync(gitFile, "utf8").trim();
-        const gitDirMatch = gitContent.match(/^gitdir:\s*(.+)$/);
-        if (gitDirMatch) {
-          return gitDirMatch[1].trim();
-        }
-      } else if (stats.isDirectory()) {
-        // This is the main repo, use .git directly
-        return gitFile;
-      }
-    }
-
-    throw new Error(
-      `Could not determine git directory for worktree: ${worktreePath}`,
-    );
+  /**
+   * Generate a deterministic hash from a worktree path for storage
+   */
+  private static hashPath(worktreePath: string): string {
+    return crypto.createHash("sha256").update(worktreePath).digest("hex");
   }
 
-  static async getMetadataPath(worktreePath: string): Promise<string> {
-    const gitDir = await this.getWorktreeGitDir(worktreePath);
-    return path.join(gitDir, METADATA_DIR, this.METADATA_FILE);
+  /**
+   * Get the metadata directory for a worktree by path hash
+   */
+  static getMetadataDir(worktreePath: string): string {
+    const hash = this.hashPath(path.resolve(worktreePath));
+    return path.join(this.METADATA_ROOT, hash);
   }
 
-  static async getMetadataDir(worktreePath: string): Promise<string> {
-    const gitDir = await this.getWorktreeGitDir(worktreePath);
-    return path.join(gitDir, METADATA_DIR);
+  /**
+   * Get the metadata file path for a worktree
+   */
+  static getMetadataPath(worktreePath: string): string {
+    return path.join(this.getMetadataDir(worktreePath), this.METADATA_FILE);
   }
 
   static async createMetadata(
@@ -76,7 +109,7 @@ export class WorktreeMetadataManager {
       branch: string;
     },
   ): Promise<WorktreeMetadata> {
-    const metadataDir = await this.getMetadataDir(worktreePath);
+    const metadataDir = this.getMetadataDir(worktreePath);
 
     // Ensure metadata directory exists
     ensureDirectorySync(metadataDir);
@@ -86,6 +119,7 @@ export class WorktreeMetadataManager {
       worktree: {
         id: uuidv4(),
         name: options.worktree_name,
+        path: path.resolve(worktreePath),
         branch: options.branch,
         created_at: new Date().toISOString(),
         created_by: options.user_id || "anonymous",
@@ -144,7 +178,7 @@ export class WorktreeMetadataManager {
   static async loadMetadata(
     worktreePath: string,
   ): Promise<WorktreeMetadata | null> {
-    const metadataPath = await this.getMetadataPath(worktreePath);
+    const metadataPath = this.getMetadataPath(worktreePath);
 
     if (!fs.existsSync(metadataPath)) {
       return null;
@@ -153,47 +187,7 @@ export class WorktreeMetadataManager {
     try {
       const yamlContent = fs.readFileSync(metadataPath, "utf8");
       const metadata = yaml.load(yamlContent) as WorktreeMetadata;
-      // assert metadata items are not null using zod
-      const parsedMetadata = z
-        .object({
-          worktree: z.object({
-            id: z.string(),
-            name: z.string(),
-            branch: z.string(),
-            created_at: z.string(),
-            created_by: z.string(),
-            status: z.enum(["active", "completed", "archived"]),
-          }),
-          team: z.object({
-            assigned_users: z.array(
-              z.object({
-                user_id: z.string(),
-                role: z.enum(["owner", "collaborator"]),
-                joined_at: z.string(),
-              }),
-            ),
-          }),
-          conversation_history: z.array(
-            z.object({
-              id: z.string(),
-              timestamp: z.string(),
-              user_id: z.string().optional(),
-              prompt: z.string(),
-              claude_response: z.string(),
-            }),
-          ),
-          auto_commit: z.object({
-            enabled: z.boolean(),
-            last_commit: z.string().nullable(),
-            pending_changes: z.number(),
-            queue_size: z.number(),
-          }),
-          git_info: z.object({
-            base_branch: z.string(),
-            current_branch: z.string(),
-          }),
-        })
-        .parse(metadata);
+      const parsedMetadata = WORKTREE_METADATA_SCHEMA.parse(metadata);
       return parsedMetadata;
     } catch (error) {
       throw new Error(`Failed to parse metadata at ${metadataPath}: ${error}`);
@@ -204,7 +198,7 @@ export class WorktreeMetadataManager {
     worktreePath: string,
     metadata: WorktreeMetadata,
   ): Promise<void> {
-    const metadataPath = await this.getMetadataPath(worktreePath);
+    const metadataPath = this.getMetadataPath(worktreePath);
 
     try {
       const yamlContent = yaml.dump(metadata, {
@@ -215,6 +209,24 @@ export class WorktreeMetadataManager {
       writeFileWithDirectorySync(metadataPath, yamlContent, "utf8");
     } catch (error) {
       throw new Error(`Failed to save metadata to ${metadataPath}: ${error}`);
+    }
+  }
+
+  /**
+   * Delete metadata file for a worktree
+   * Use when worktree is permanently removed
+   */
+  static deleteMetadata(worktreePath: string): void {
+    const metadataDir = this.getMetadataDir(worktreePath);
+
+    if (!fs.existsSync(metadataDir)) {
+      return;
+    }
+
+    try {
+      fs.rmSync(metadataDir, { recursive: true, force: true });
+    } catch (error) {
+      console.warn(`Failed to delete metadata at ${metadataDir}: ${error}`);
     }
   }
 
@@ -252,35 +264,47 @@ export class WorktreeMetadataManager {
 
   static async getWorktreeByTaskId(
     taskId: string,
-    searchPath?: string,
+    _searchPath?: string,
   ): Promise<{
     worktreePath: string;
     metadata: WorktreeMetadata;
   } | null> {
-    const baseDir = searchPath || process.cwd();
-    const worktreesDir = path.join(baseDir, "worktrees");
-
-    if (!fs.existsSync(worktreesDir)) {
+    // Scan all metadata files to find matching task ID
+    if (!fs.existsSync(this.METADATA_ROOT)) {
       return null;
     }
 
     try {
-      const entries = fs.readdirSync(worktreesDir, { withFileTypes: true });
+      const metadataDirs = fs.readdirSync(this.METADATA_ROOT, {
+        withFileTypes: true,
+      });
 
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          const worktreePath = path.join(worktreesDir, entry.name);
-          const metadata = await this.loadMetadata(worktreePath);
+      for (const dir of metadataDirs) {
+        if (dir.isDirectory()) {
+          const metadataPath = path.join(
+            this.METADATA_ROOT,
+            dir.name,
+            this.METADATA_FILE,
+          );
 
-          if (metadata && metadata.worktree.id === taskId) {
-            return { worktreePath, metadata };
+          if (fs.existsSync(metadataPath)) {
+            try {
+              const yamlContent = fs.readFileSync(metadataPath, "utf8");
+              const metadata = yaml.load(yamlContent) as WorktreeMetadata;
+
+              if (metadata.worktree.id === taskId) {
+                return { worktreePath: metadata.worktree.path, metadata };
+              }
+            } catch (error) {
+              console.warn(
+                `Failed to parse metadata at ${metadataPath}: ${error}`,
+              );
+            }
           }
         }
       }
     } catch (error) {
-      console.warn(
-        `Warning: Could not search worktrees in ${worktreesDir}: ${error}`,
-      );
+      console.warn(`Failed to scan metadata directory: ${error}`);
     }
 
     return null;
@@ -356,5 +380,43 @@ export class WorktreeMetadataManager {
         new Date(b.metadata?.worktree?.created_at ?? "").getTime() -
         new Date(a.metadata?.worktree?.created_at ?? "").getTime(),
     );
+  }
+
+  /**
+   * Ensure metadata exists for multiple worktrees in parallel
+   * Returns lists of succeeded and failed worktrees
+   */
+  static async ensureMetadataForWorktrees(
+    worktreePaths: string[],
+    ensureMetadataFn: (path: string) => Promise<void>,
+  ): Promise<{
+    succeeded: string[];
+    failed: Array<{ path: string; error: string }>;
+  }> {
+    const results = await Promise.allSettled(
+      worktreePaths.map(async (worktreePath) => {
+        const existing = await this.loadMetadata(worktreePath);
+        if (!existing) {
+          await ensureMetadataFn(worktreePath);
+        }
+        return worktreePath;
+      }),
+    );
+
+    const succeeded: string[] = [];
+    const failed: Array<{ path: string; error: string }> = [];
+
+    results.forEach((result, idx) => {
+      if (result.status === "fulfilled") {
+        succeeded.push(result.value);
+      } else {
+        failed.push({
+          path: worktreePaths[idx],
+          error: result.reason.message,
+        });
+      }
+    });
+
+    return { succeeded, failed };
   }
 }

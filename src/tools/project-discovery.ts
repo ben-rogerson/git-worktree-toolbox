@@ -226,9 +226,11 @@ export const listProjects = {
           try {
             const worktrees =
               await WorktreeMetadataManager.listAllWorktrees(project.path);
-            for (const worktree of worktrees) {
-              await ensureWorktreeHasMetadata(worktree.worktreePath);
-            }
+            const worktreePaths = worktrees.map((w) => w.worktreePath);
+            await WorktreeMetadataManager.ensureMetadataForWorktrees(
+              worktreePaths,
+              ensureWorktreeHasMetadata,
+            );
           } catch (error) {
             console.warn(
               `Failed to ensure metadata for worktrees in ${project.name}:`,
