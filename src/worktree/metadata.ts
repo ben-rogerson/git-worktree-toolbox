@@ -57,7 +57,7 @@ const WORKTREE_METADATA_SCHEMA = z.object({
       timestamp: z.string(),
       user_id: z.string().optional(),
       prompt: z.string(),
-      claude_response: z.string(),
+      response: z.string(),
     }),
   ),
   auto_commit: z.object({
@@ -128,14 +128,7 @@ export class WorktreeMetadataManager {
       team: {
         assigned_users: [],
       },
-      conversation_history: [
-        {
-          id: uuidv4(),
-          timestamp: new Date().toISOString(),
-          prompt: options.task_description,
-          claude_response: "Creating worktree for task...",
-        },
-      ],
+      conversation_history: [],
       auto_commit: {
         enabled: true,
         last_commit: null,

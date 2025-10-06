@@ -34,7 +34,7 @@ export interface ConversationEntry {
   timestamp: string;
   user_id?: string;
   prompt: string;
-  claude_response: string;
+  response: string;
   commit_hash?: string;
 }
 

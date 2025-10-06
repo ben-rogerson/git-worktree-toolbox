@@ -75,7 +75,7 @@ export class WorktreeManager {
       // Step 4: Add conversation entry
       await WorktreeMetadataManager.addConversationEntry(worktree.path, {
         prompt: options.task_description,
-        claude_response: `Created worktree "${worktreeName}" and auto-commit enabled`,
+        response: `Created worktree "${worktreeName}" and auto-commit enabled`,
       });
 
       return {
