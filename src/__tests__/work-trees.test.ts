@@ -66,6 +66,9 @@ describe("Work Trees", () => {
       birthtime: new Date("2024-01-01T00:00:00.000Z"),
       mtime: new Date("2024-01-01T00:00:00.000Z"),
     } as never);
+
+    // Reset mockExecAsync to return a default successful response
+    mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
   });
 
   describe("createWorkTree", () => {
@@ -120,10 +123,10 @@ describe("Work Trees", () => {
         it("should create a work tree with name and branch", async () => {
           // Mock successful git worktree operations
           mockExecAsync
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees returns empty (called first in createWorkTree)
             .mockResolvedValueOnce({ stdout: "commit-hash", stderr: "" }) // gitHasCommits
             .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitBranchExists returns false
             .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitCreateBranch
-            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees returns empty
             .mockResolvedValueOnce({ stdout: "success", stderr: "" }); // gitWorktreeAdd succeeds
 
           const result = await createWorkTree("test-worktree", "test");
@@ -138,10 +141,10 @@ describe("Work Trees", () => {
           const customPath = "/custom/path/worktree";
 
           mockExecAsync
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees returns empty
             .mockResolvedValueOnce({ stdout: "commit-hash", stderr: "" }) // gitHasCommits
             .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitBranchExists
             .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitCreateBranch
-            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees
             .mockResolvedValueOnce({ stdout: "success", stderr: "" }); // gitWorktreeAdd
 
           const result = await createWorkTree("test", "main", customPath);
@@ -150,10 +153,10 @@ describe("Work Trees", () => {
 
         it("should generate unique ID for work tree", async () => {
           mockExecAsync
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees returns empty
             .mockResolvedValueOnce({ stdout: "commit-hash", stderr: "" }) // gitHasCommits
             .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitBranchExists
             .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitCreateBranch
-            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees
             .mockResolvedValueOnce({ stdout: "success", stderr: "" }); // gitWorktreeAdd
 
           const result = await createWorkTree("test", "main");
@@ -164,10 +167,10 @@ describe("Work Trees", () => {
 
         it("should set creation timestamp", async () => {
           mockExecAsync
+            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees returns empty
             .mockResolvedValueOnce({ stdout: "commit-hash", stderr: "" }) // gitHasCommits
             .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitBranchExists
             .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitCreateBranch
-            .mockResolvedValueOnce({ stdout: "", stderr: "" }) // listWorkTrees
             .mockResolvedValueOnce({ stdout: "success", stderr: "" }); // gitWorktreeAdd
 
           const before = new Date();
@@ -305,12 +308,19 @@ branch refs/heads/feature
 
     describe("removeWorkTree", () => {
       describe("error handling", () => {
-        it("should return a promise (implementation complete)", () => {
+        it("should return a promise (implementation complete)", async () => {
           const result = removeWorkTree("test");
           expect(result).toBeInstanceOf(Promise);
+          // Await the promise to prevent unhandled rejection
+          try {
+            await result;
+          } catch {
+            // Expected to fail since "test" worktree doesn't exist
+          }
         });
 
         it("should handle non-existent work tree names", async () => {
+          // Mock listWorkTrees to return empty list (no worktrees found)
           mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
 
           await expect(removeWorkTree("non-existent")).rejects.toThrow(
@@ -349,7 +359,7 @@ branch refs/heads/feature
       describe("successful removal", () => {
         it("should remove work tree by name", async () => {
           mockExecAsync
-            // listWorkTrees call
+            // listWorkTrees call (first call in removeWorkTree)
             .mockResolvedValueOnce({
               stdout:
                 "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
@@ -373,7 +383,7 @@ branch refs/heads/feature
 
         it("should clean up work tree directory", async () => {
           mockExecAsync
-            // listWorkTrees call
+            // listWorkTrees call (first call in removeWorkTree)
             .mockResolvedValueOnce({
               stdout:
                 "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
@@ -403,7 +413,7 @@ branch refs/heads/feature
         it("should force remove if directory is locked", async () => {
           const worktreePath = "/path/to/test-branch";
           mockExecAsync
-            // listWorkTrees call
+            // listWorkTrees call (first call in removeWorkTree)
             .mockResolvedValueOnce({
               stdout: `worktree ${worktreePath}\nbranch refs/heads/test\n\n`,
               stderr: "",
@@ -441,7 +451,7 @@ branch refs/heads/feature
 
         it("should update work tree registry after removal", async () => {
           mockExecAsync
-            // listWorkTrees call
+            // listWorkTrees call (first call in removeWorkTree)
             .mockResolvedValueOnce({
               stdout:
                 "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
