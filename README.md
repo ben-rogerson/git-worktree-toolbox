@@ -1,80 +1,31 @@
-# 🌳 Git Worktree Toolbox MCP Server (includes CLI)
+# Git Worktree Toolbox
 
-Gives AI agents the power to spin up isolated git worktrees on demand. Work on multiple features in parallel, each with its own branch, without stash and branch-switching chaos.
+[![npm](https://img.shields.io/npm/v/git-worktree-toolbox?colorA=222222&colorB=333333)](https://www.npmjs.com/package/git-worktree-toolbox)
+[![minzip package size](https://img.shields.io/bundlephobia/minzip/git-worktree-toolbox?label=minzip%20size&colorA=222222&colorB=333333)](https://bundlephobia.com/package/git-worktree-toolbox)
 
-Each task runs in its own sandbox—experiment, so you can break things or pivot strategies—while your main branch stays pristine. Built for AI-assisted workflows where rapid iteration and context switching are the norm.
+🌳 **Git Worktree Toolbox** is a MCP server and CLI for managing git worktrees.
 
-### Available MCP Tools
+Create isolated workspaces without the hassle of stashing changes and switching branches.
 
-**Discovery & Navigation**
+Ideal for AI-assisted development workflows requiring multiple features in parallel.
+
+As a backup, use the `gwtree` command to run any of the mcp tools yourself.
+
+## Available MCP Tools (9)
 
 - `list` - List projects and their worktrees
-- `go` - Open worktree folder in your editor
-
-**Worktree Lifecycle**
-
 - `new` - Create a new worktree with a matching branch
-- `changes` - Show changes and optionally commit and push
-- `archive` - Archive worktree and matching branch
-- `doctor` - Check and fix worktree metadata
-
-**Integration**
-
-- `mr` - Supply the MR/PR creation link
-- `grab` - Merge changes from another worktree
-
-### CLI Usage
-
-Use the `gwtree` CLI to run tools directly:
-
-```bash
-# Create a new worktree
-gwtree create -d "Fix login bug" -b login-fix
-
-# Archive a worktree (with branch removal)
-gwtree archive -i task-abc123 -r
-
-# Open worktree in editor
-gwtree go -i task-abc123 -e cursor
-
-# Show changes and commit/push
-gwtree changes -i task-abc123
-# Commit/push the changes
-gwtree changes -i task-abc123 -c
-
-# Merge changes from another worktree
-gwtree grab -i feature-branch -f
-
-# Generate MR link
-gwtree mr -i task-abc123
-
-# List all projects
-gwtree list
-
-# Check worktree health
-gwtree doctor
-
-# Show help
-gwtree --help
-
-# Show version
-gwtree --version
-```
-
-**Positional arguments**: The first string flag can be provided without the flag name:
-
-```bash
-gwtree create "Fix login bug"  # Same as: gwtree create -d "Fix login bug"
-```
+- `archive` - Archive worktrees and branches
+- `go` - Open worktree folder in your editor
+- `changes` - Review changes and optionally commit and push
+- `grab` - Pull in changes from a specific worktree
+- `pr` - Generate a link to create a pull/merge request
+- `doctor` - Fix worktree metadata issues
+- `clean` - Archive unused worktrees
 
 ## Get Started
 
-Two installation options for this package:
-
-**Option 1: Use with npx (recommended)**
-
-- No installation required
-- Version auto updates
+Add the MCP Server to Cursor / Claude Desktop:
 
 ```json
 {
@@ -87,59 +38,63 @@ Two installation options for this package:
 }
 ```
 
-**Option 2: Install Globally**
-
-- Locally installed and run
-- No version auto updates
+The `gwtree` command can be used after a global installation:
 
 ```bash
 npm install -g git-worktree-toolbox
 ```
 
-```json
-{
-  "mcpServers": {
-    "git-worktree-toolbox": {
-      "command": "gwtree"
-    }
-  }
-}
+Run `gwtree help` to see the available tools and their flags.
+
+<details>
+<summary>CLI commands</summary>
+
+```bash
+# List all projects with worktrees
+gwtree list
+
+# Create a new worktree with a matching branch
+gwtree new "Fix login bug and flow"
+
+# Archive current worktree (with branch removal)
+gwtree archive -r
+
+# Open current worktree and branch in editor
+gwtree go
+
+# Show the changes from all associated worktrees
+gwtree changes
+
+# Pull in changes from a specific worktree
+gwtree grab fix-login-bug-1242
+
+# Commit and push changes in a specific worktree
+gwtree changes fix-login-bug-1242 -c
+
+# Generate a link to create a pull/merge request
+gwtree pr
+
+# Fix worktree metadata issues
+gwtree doctor
+
+# Archive unused worktrees
+gwtree clean
+
+# Show help with advanced flag usage examples
+gwtree help
 ```
+
+</details>
 
 ### Configuration
 
-Configure the server behavior with environment variables (optional):
+Configure the worktrees folder and project directories (optional):
 
 ```env
-# Base directory for all worktrees
+# Storage directory for worktrees and metadata files
 # Default: ~/.gwtree/worktrees
 BASE_WORKTREES_PATH=~/my-custom-worktrees
 
 # Custom project directories for discovery (colon-separated)
-# Default: ~/Projects:~/Code:~/Developer:~/dev
-PROJECT_DIRECTORIES=~/custom-projects:~/work:~/repos
+PROJECT_DIRECTORIES="$HOME/custom-projects:$HOME/work"
 ```
-
-**Environment Variables:**
-
-- `BASE_WORKTREES_PATH` - Override the default location where worktrees are created
-- `PROJECT_DIRECTORIES` - Colon-separated list of directories to scan for git projects
-
-## Development
-
-Run the dev server and inspect the MCP connection:
-
-```sh
-npm run dev
-npm run inspect
-```
-
-### Why use a STDIO transport?
-
-**STDIO** (stdin/stdout) was chosen over HTTP/SSE and WebSocket transports for several key reasons:
-
-**Security** - Process-level isolation. No exposed ports, no authentication layers, no CORS concerns. Communication stays within the local machine.
-
-**Simplicity** - Zero infrastructure required. No web servers, proxies, or network configuration. Just a command that spawns a process.
-
-**Native MCP Support** - Claude Desktop and Cursor natively support STDIO transport out-of-the-box. No additional tooling or adapters needed.
