@@ -23,6 +23,20 @@ As a backup, use the `gwtree` command to run any of the mcp tools yourself.
 - `doctor` - Fix worktree metadata issues
 - `clean` - Archive unused worktrees
 
+### Usage Examples
+
+Once the MCP server is added, here's how you might phrase requests to activate each tool:
+
+- **List worktrees**: "List worktrees", "Show me all my projects and worktrees", "What worktrees do I have?"
+- **Create new worktree**: "New worktree for fixing the login bug", "Set up a new workspace for the user dashboard feature", "Make a worktree for the API refactor"
+- **Archive worktree**: "Archive this worktree", "Clean up the completed feature worktree", "Remove the old worktree and its branch"
+- **Open worktree**: "Open the login bug worktree in my editor", "Switch to the dashboard worktree", "Go to the API refactor workspace"
+- **Review/Push changes**: "Show changes from task-245", "What files have I modified?", "Push changes for task-245"
+- **Grab changes**: "Get login bug worktree changes", "Merge updates from the dashboard branch", "Pull in changes from the API worktree"
+- **Create PR**: "Generate a pull request link", "Create a merge request for task-245", "Make a PR for the current changes"
+- **Fix issues**: "Fix my worktree metadata", "Repair worktree configuration", "Doctor the worktree setup"
+- **Clean up**: "Clean unused worktrees", "Archive old worktrees", "Remove completed worktrees"
+
 ## Get Started
 
 Add the MCP Server to Cursor / Claude Desktop:
@@ -38,7 +52,7 @@ Add the MCP Server to Cursor / Claude Desktop:
 }
 ```
 
-The `gwtree` command can be used after a global installation:
+The `gwtree` CLI is also available after a global installation:
 
 ```bash
 npm install -g git-worktree-toolbox
