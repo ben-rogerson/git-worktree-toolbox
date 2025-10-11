@@ -102,13 +102,16 @@ gwtree help
 
 ### Configuration
 
-Configure the worktrees folder and project directories (optional):
+Configure the worktrees folder and project directories using environment variables (optional):
 
-```env
-# Storage directory for worktrees and metadata files
+```bash
+# Storage directory for worktrees
 # Default: ~/.gwtree/worktrees
-BASE_WORKTREES_PATH=~/my-custom-worktrees
+export BASE_WORKTREES_PATH=~/my-custom-worktrees
 
 # Custom project directories for discovery (colon-separated)
-PROJECT_DIRECTORIES="$HOME/custom-projects:$HOME/work"
+# Default: ~/Projects, ~/Code, ~/Developer
+export PROJECT_DIRECTORIES="$HOME/custom-projects:$HOME/work"
 ```
+
+Add these to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.) to persist across sessions.

@@ -43,10 +43,11 @@ async function runServer() {
   );
 
   // Register tools
+  const { getGlobalConfig } = await import("./utils/constants.js");
+  const globalConfig = getGlobalConfig();
   const config = {
-    base_worktrees_path: process.env.BASE_WORKTREES_PATH,
-    project_directories:
-      process.env.PROJECT_DIRECTORIES?.split(":").filter(Boolean),
+    base_worktrees_path: globalConfig.baseWorktreesPath,
+    project_directories: globalConfig.projectDirectories,
   };
   worktreeTools.register(server, config);
 
@@ -132,10 +133,11 @@ async function runTool(
 ): Promise<void> {
   const worktreeTools = await loadWorktreeTools();
 
+  const { getGlobalConfig } = await import("./utils/constants.js");
+  const globalConfig = getGlobalConfig();
   const config = {
-    base_worktrees_path: process.env.BASE_WORKTREES_PATH,
-    project_directories:
-      process.env.PROJECT_DIRECTORIES?.split(":").filter(Boolean),
+    base_worktrees_path: globalConfig.baseWorktreesPath,
+    project_directories: globalConfig.projectDirectories,
   };
 
   const { WorktreeManager } = await import("./worktree/manager.js");
