@@ -24,13 +24,9 @@ describe("List Command Integration Tests", () => {
         // (this was the key change - we removed this section)
         expect(output).not.toContain("Projects without worktrees");
 
-        // Verify that helpful usage tips are included
-        expect(output).toContain(
-          'Use the "changes" tool to see existing worktrees',
-        );
-        expect(output).toContain(
-          'Use the "create" tool to create a new worktree',
-        );
+        // Verify that helpful usage tips are included (via CLI footer)
+        expect(output).toContain("gwtree changes");
+        expect(output).toContain("gwtree create");
 
         // The test passes if we reach this point without errors
         expect(true).toBe(true);

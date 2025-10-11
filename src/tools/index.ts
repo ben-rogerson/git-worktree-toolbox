@@ -83,11 +83,25 @@ export function register(server: Server, config: WorktreeMcpToolsConfig) {
     ): Promise<{
       content: { type: "text" | "image"; text?: string; image_data?: string }[];
     }> => {
-      const tool = tools.find((t) => t.name === request.params.name);
+      const tool: McpTool | undefined = tools.find(
+        (t) => t.name === request.params.name,
+      );
       if (!tool) {
         throw new Error(`Unknown tool: ${request.params.name}`);
       }
-      return tool.cb(request.params.arguments || {}, { worktreeManager });
+      const result = await tool.cb(request.params.arguments || {}, {
+        worktreeManager,
+      });
+
+      // Append MCP footer if available
+      if (tool.mcpFooter && result.content.length > 0) {
+        const lastItem = result.content[result.content.length - 1];
+        if (lastItem.type === "text" && lastItem.text) {
+          lastItem.text += `\n\n${tool.mcpFooter}`;
+        }
+      }
+
+      return result;
     },
   );
 }

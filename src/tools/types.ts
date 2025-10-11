@@ -20,6 +20,8 @@ export type McpTool = {
   name: string;
   description: string;
   cli?: CliConfig;
+  cliFooter?: string;
+  mcpFooter?: string;
   parameters: (z: ZodNamespace) => Record<string, ZodType>;
   cb: (
     args: Record<string, unknown>,

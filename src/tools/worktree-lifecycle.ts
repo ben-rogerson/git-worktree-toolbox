@@ -52,6 +52,10 @@ export const createTaskWorktree = {
       },
     ],
   },
+  cliFooter:
+    "💡 Run `gwtree go <task_id>` to open the worktree in your editor\n💡 Run `gwtree changes` to see all worktrees and their changes",
+  mcpFooter:
+    '💡 Use the "go" tool with the task ID to open the worktree in your editor\n💡 Use the "changes" tool to see all worktrees and their current status',
   parameters: (z) => ({
     task_description: z
       .string()
@@ -151,6 +155,10 @@ export const archiveWorktree = {
       { param: "has_branch_removal", alias: "r", description: "Remove branch" },
     ],
   },
+  cliFooter:
+    "💡 Run `gwtree archive <identifier> -r` to remove the branch as well\n💡 Run `gwtree list` to see all available worktrees",
+  mcpFooter:
+    '💡 Set "has_branch_removal: true" to remove the branch as well\n💡 Use the "list" tool to see all available worktrees',
   parameters: (z) => ({
     worktree_identifier: sharedParameters.worktree_identifier(z),
     has_branch_removal: z
@@ -172,7 +180,7 @@ export const archiveWorktree = {
         content: [
           {
             type: "text",
-            text: "❌ Error: worktree_identifier is required. Please provide a worktree identifier.\n\nUsage: gwtree archive -i <worktree_identifier> [--has_branch_removal]\n\nExample: gwtree archive -i task-abc123",
+            text: '❌ Error: worktree_identifier is required.\n\nPlease provide a worktree identifier (task ID, name, or path).',
           },
         ],
       };
@@ -659,7 +667,7 @@ export const cleanWorktrees = {
         }
       } else if (dry_run) {
         responseText += `🔍 Dry run mode - no workspaces were actually archived.\n`;
-        responseText += `Run without --dry_run to perform the cleanup.\n`;
+        responseText += `Set dry_run to false to perform the cleanup.\n`;
       } else {
         responseText += `✨ All workspaces are clean - nothing to archive!\n`;
       }
@@ -707,6 +715,10 @@ export const launchWorktree = {
       },
     ],
   },
+  cliFooter:
+    "💡 Run `gwtree go <identifier> -e code` to open in VS Code instead\n💡 Run `gwtree list` to see all available worktrees",
+  mcpFooter:
+    '💡 Set "editor" parameter to "code" or "cursor" to choose your editor\n💡 Use the "list" tool to see all available worktrees',
   parameters: (z) => ({
     worktree_identifier: sharedParameters.worktree_identifier(z),
     editor: z

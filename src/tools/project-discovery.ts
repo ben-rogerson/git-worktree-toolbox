@@ -210,6 +210,10 @@ export const listProjects = {
     aliases: ["list"],
     flags: [],
   },
+  cliFooter:
+    "💡 Run `gwtree changes <identifier>` to see changes in a worktree\n💡 Run `gwtree create <description>` to create a new worktree",
+  mcpFooter:
+    '💡 Use the "changes" tool with a worktree identifier to see detailed changes\n💡 Use the "create" tool to create a new worktree for a task',
   parameters: () => ({}),
   cb: async (
     _args: Record<string, unknown>,
@@ -345,11 +349,8 @@ export const listProjects = {
         }
         text += "\n";
       } else {
-        text += `No projects with worktrees found.\n\n`;
+        text += `No projects with worktrees found.\n`;
       }
-
-      text += `💡 Use the "changes" tool to see existing worktrees.\n`;
-      text += `💡 Use the "create" tool to create a new worktree.`;
 
       return {
         content: [{ type: "text", text }],
@@ -380,6 +381,10 @@ export const generateMrLink = {
       },
     ],
   },
+  cliFooter:
+    "💡 Run `gwtree changes <identifier>` to see what changes will be in the MR\n💡 Run `gwtree list` to see all available worktrees",
+  mcpFooter:
+    '💡 Use the "changes" tool to see what changes will be in the merge request\n💡 Use the "list" tool to see all available worktrees',
   parameters: (z) => ({
     worktree_identifier: sharedParameters.worktree_identifier(z),
   }),

@@ -33,6 +33,10 @@ export const worktreeChanges = {
       },
     ],
   },
+  cliFooter:
+    "💡 Run `gwtree changes <identifier>` to see detailed changes for a specific worktree\n💡 Run `gwtree changes -p` to commit and push all pending changes",
+  mcpFooter:
+    '💡 Use "worktree_identifier" parameter to see detailed changes for a specific worktree\n💡 Set "push_changes: true" to commit and push all pending changes',
   parameters: (z) => ({
     worktree_identifier: z
       .string()
@@ -41,7 +45,7 @@ export const worktreeChanges = {
     push_changes: z
       .boolean()
       .optional()
-      .describe("Commit and push all changes after displaying them"),
+      .describe("Commit and push all changes"),
   }),
   cb: async (
     args: Record<string, unknown>,
@@ -251,10 +255,6 @@ export const worktreeChanges = {
           .filter(Boolean)
           .join("\n\n");
 
-        const helpMessage = push_changes
-          ? `\n💡 Use \`worktree_identifier\` to see detailed changes for a specific worktree.`
-          : `\n💡 Use \`worktree_identifier\` to see detailed changes for a specific worktree.\n💡 Use \`-p\` flag to commit and push pending changes.`;
-
         return {
           content: [
             {
@@ -262,8 +262,7 @@ export const worktreeChanges = {
               text:
                 pushMessage +
                 `📊 All Worktree Changes (${worktreeChanges.length} worktrees)\n\n` +
-                worktreeList +
-                helpMessage,
+                worktreeList,
             },
           ],
         };
@@ -400,9 +399,9 @@ export const worktreeChanges = {
       const teamSize = metadata.team.assigned_users.length;
       const conversationCount = metadata.conversation_history.length;
 
-      const pushMessage = push_changes
+      const pushNotice = push_changes
         ? "\n✅ All pending changes have been committed and pushed.\n"
-        : `\n💡 Use \`push_changes: true\` to commit and push pending changes.\n`;
+        : "";
 
       return {
         content: [
@@ -425,7 +424,7 @@ export const worktreeChanges = {
               `• Committed Changes: ${committedText}\n` +
               `• Uncommitted Changes: ${uncommittedChanges.length} file${uncommittedChanges.length !== 1 ? "s" : ""}\n` +
               `Uncommitted Files:\n${uncommittedText}` +
-              pushMessage,
+              pushNotice,
           },
         ],
       };
@@ -461,6 +460,10 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
       },
     ],
   },
+  cliFooter:
+    "💡 Run `gwtree grab <identifier>` first to preview changes (dry run)\n💡 Run `gwtree grab <identifier> -f` to actually copy the files",
+  mcpFooter:
+    '💡 Omit "avoid_dry_run" parameter first to preview changes (dry run)\n💡 Set "avoid_dry_run: true" to actually copy the files from the worktree',
   parameters: (z) => ({
     worktree_identifier: sharedParameters.worktree_identifier(z),
     avoid_dry_run: z.boolean().optional().describe("Avoid dry run"),
@@ -598,7 +601,7 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
                 `• Target: ${currentBranch}\n` +
                 `• No conflicts detected` +
                 filesText +
-                `\n\nRun with \`dry_run: false\` to copy the files (no history preserved).`,
+                `\n\nSet avoid_dry_run parameter to copy the files (no history preserved).`,
             },
           ],
         };

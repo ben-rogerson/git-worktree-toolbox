@@ -145,7 +145,9 @@ async function runTool(
 
   const TOOL_ALIASES = buildToolAliases(worktreeTools.tools);
   const resolvedToolName = TOOL_ALIASES[toolName] || toolName;
-  const tool = worktreeTools.tools.find((t) => t.name === resolvedToolName);
+  const tool: McpTool | undefined = worktreeTools.tools.find(
+    (t) => t.name === resolvedToolName,
+  );
   if (!tool) {
     throw new Error(
       `Unknown tool: ${toolName}. Run 'gwtree --help' to see available tools.`,
@@ -158,7 +160,14 @@ async function runTool(
   if (result.content && result.content.length > 0) {
     for (const item of result.content) {
       if (item.type === "text" && item.text) {
-        console.log(item.text);
+        let output = item.text;
+
+        // Append CLI footer if available
+        if (tool.cliFooter) {
+          output += `\n\n${tool.cliFooter}`;
+        }
+
+        console.log(output);
       }
     }
   }
