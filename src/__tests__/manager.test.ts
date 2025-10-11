@@ -179,8 +179,8 @@ describe("WorktreeManager", () => {
 
       expect(link).toContain("gitlab.com");
       expect(link).toContain("merge_requests/new");
-      expect(link).toContain("merge_request[source_branch]=feature-branch");
-      expect(link).toContain("merge_request[target_branch]=main");
+      expect(link).toContain("merge_request%5Bsource_branch%5D=feature-branch");
+      expect(link).toContain("merge_request%5Btarget_branch%5D=main");
     });
 
     it("should generate GitHub PR link", async () => {

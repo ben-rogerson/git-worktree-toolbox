@@ -149,7 +149,9 @@ export class WorktreeManager {
       metadata.git_info.remote_url || "https://gitlab.com/your-org/your-repo";
 
     if (repoUrl.includes("gitlab")) {
-      return `${repoUrl}/-/merge_requests/new?merge_request[source_branch]=${branchName}&merge_request[target_branch]=${baseBranch}`;
+      const sourceBranch = encodeURIComponent(branchName);
+      const targetBranch = encodeURIComponent(baseBranch);
+      return `${repoUrl}/-/merge_requests/new?merge_request%5Bsource_branch%5D=${sourceBranch}&merge_request%5Btarget_branch%5D=${targetBranch}`;
     } else if (repoUrl.includes("github")) {
       return `${repoUrl}/compare/${baseBranch}...${branchName}`;
     } else {
@@ -175,7 +177,9 @@ export class WorktreeManager {
       metadata.git_info.remote_url || "https://gitlab.com/your-org/your-repo";
 
     if (repoUrl.includes("gitlab")) {
-      return `${repoUrl}/-/merge_requests/new?merge_request[source_branch]=${branchName}&merge_request[target_branch]=${baseBranch}`;
+      const sourceBranch = encodeURIComponent(branchName);
+      const targetBranch = encodeURIComponent(baseBranch);
+      return `${repoUrl}/-/merge_requests/new?merge_request%5Bsource_branch%5D=${sourceBranch}&merge_request%5Btarget_branch%5D=${targetBranch}`;
     } else if (repoUrl.includes("github")) {
       return `${repoUrl}/compare/${baseBranch}...${branchName}`;
     } else {
