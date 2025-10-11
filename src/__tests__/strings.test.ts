@@ -72,45 +72,51 @@ describe("String Utilities", () => {
 
   describe("generateWorktreeName", () => {
     it("should include extracted keywords", () => {
-      const name = generateWorktreeName("fix authentication bug");
-      expect(name).toContain("fix");
-      expect(name).toContain("authentication");
+      const name = generateWorktreeName("add user profile");
+      expect(name).toContain("add");
+      expect(name).toContain("user");
+      expect(name).toContain("profile");
     });
 
-    it("should not include user identifier", () => {
-      const name = generateWorktreeName("test task");
-      expect(name).not.toContain("john");
-      expect(name).not.toContain("anon");
-    });
-
-    it("should include timestamp suffix", () => {
-      const name = generateWorktreeName("test");
-      expect(name).toMatch(/\d{4}$/);
+    it("should match branch name format", () => {
+      const description = "test task";
+      const worktreeName = generateWorktreeName(description);
+      const branchName = generateBranchName(description);
+      expect(worktreeName).toBe(branchName);
     });
 
     it("should handle empty description", () => {
       const name = generateWorktreeName("");
-      expect(name).toContain("task");
+      expect(name).toBe("task");
     });
 
     it("should handle description with only special chars", () => {
       const name = generateWorktreeName("@#$%^&");
-      expect(name).toContain("task");
+      expect(name).toBe("task");
     });
 
-    it("should handle very long descriptions", () => {
+    it("should respect 20 character limit", () => {
       const longDesc =
         "implement a new feature with authentication and authorization for the user management system";
       const name = generateWorktreeName(longDesc);
-      expect(name.length).toBeLessThan(100);
+      expect(name.length).toBeLessThanOrEqual(20);
+    });
+
+    it("should generate identical names for branch and worktree", () => {
+      const description = "fix authentication bug";
+      const worktreeName = generateWorktreeName(description);
+      const branchName = generateBranchName(description);
+
+      expect(worktreeName).toBe(branchName);
     });
   });
 
   describe("generateBranchName", () => {
     it("should extract keywords from description", () => {
-      const branch = generateBranchName("fix authentication bug");
-      expect(branch).toContain("fix");
-      expect(branch).toContain("authentication");
+      const branch = generateBranchName("add user profile");
+      expect(branch).toContain("add");
+      expect(branch).toContain("user");
+      expect(branch).toContain("profile");
     });
 
     it("should use up to 4 keywords", () => {
@@ -120,14 +126,16 @@ describe("String Utilities", () => {
       expect(keywords.length).toBeLessThanOrEqual(4);
     });
 
-    it("should include timestamp suffix", () => {
-      const branch = generateBranchName("test");
-      expect(branch).toMatch(/\d{4}$/);
+    it("should match worktree name format", () => {
+      const description = "test";
+      const worktreeName = generateWorktreeName(description);
+      const branchName = generateBranchName(description);
+      expect(branchName).toBe(worktreeName);
     });
 
     it("should handle empty description", () => {
       const branch = generateBranchName("");
-      expect(branch).toContain("task");
+      expect(branch).toBe("task");
     });
 
     it("should produce valid git branch name", () => {
@@ -140,7 +148,14 @@ describe("String Utilities", () => {
 
     it("should handle description with only excluded words", () => {
       const branch = generateBranchName("the and for with");
-      expect(branch).toContain("task");
+      expect(branch).toBe("task");
+    });
+
+    it("should respect 20 character limit", () => {
+      const longDesc =
+        "implement a new feature with authentication and authorization for the user management system";
+      const branch = generateBranchName(longDesc);
+      expect(branch.length).toBeLessThanOrEqual(20);
     });
   });
 });

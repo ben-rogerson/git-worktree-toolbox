@@ -31,26 +31,28 @@ export function extractKeywords(
     .slice(0, maxWords);
 }
 
-export function generateWorktreeName(taskDescription: string): string {
-  // Extract key words from task description
-  const words = extractKeywords(taskDescription);
-
-  // If no meaningful keywords, use a sanitized version of the task description
-  let taskPart = words.join("-");
-  if (!taskPart) {
-    // Use the first few characters of the sanitized description, or "task" as fallback
-    const sanitized = sanitizeForGit(taskDescription);
-    taskPart = sanitized.length > 0 ? sanitized.substring(0, 10) : "task";
-  }
-
-  return `${taskPart}-${Date.now().toString().slice(-4)}`;
-}
-
-export function generateBranchName(taskDescription: string): string {
+function generateBaseName(taskDescription: string, maxLength: number): string {
   const words = extractKeywords(taskDescription, {
     maxWords: 4,
     minWordLength: 2,
   });
 
-  return `${words.join("-") || "task"}-${Date.now().toString().slice(-4)}`;
+  const baseName = words.join("-") || "task";
+
+  // Truncate to maxLength if needed
+  if (baseName.length > maxLength) {
+    return baseName.substring(0, maxLength);
+  }
+
+  return baseName;
+}
+
+export function generateWorktreeName(taskDescription: string): string {
+  // Max 20 chars total
+  return generateBaseName(taskDescription, 20);
+}
+
+export function generateBranchName(taskDescription: string): string {
+  // Max 20 chars total
+  return generateBaseName(taskDescription, 20);
 }
