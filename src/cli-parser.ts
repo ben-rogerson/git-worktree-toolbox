@@ -98,7 +98,7 @@ export async function parseArgs(
   }
 
   // Check for help flag
-  if (firstArg === "--help" || firstArg === "-h") {
+  if (firstArg === "--help" || firstArg === "-h" || firstArg === "help") {
     return { mode: "help" };
   }
 

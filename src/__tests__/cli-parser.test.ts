@@ -74,6 +74,11 @@ describe("CLI Parser", () => {
       expect(result.mode).toBe("help");
     });
 
+    it("should return help mode for help", async () => {
+      const result = await parseArgs(["help"], mockTools);
+      expect(result.mode).toBe("help");
+    });
+
     it("should resolve tool by name", async () => {
       const result = await parseArgs(["create_task_worktree"], mockTools);
       expect(result.mode).toBe("tool");
