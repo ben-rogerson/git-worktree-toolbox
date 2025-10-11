@@ -237,7 +237,7 @@ export async function gitPush(
   }
 
   const branchArg = branch ? ` ${branch}` : "";
-  const command = `git push -u ${remote}${branchArg}`;
+  const command = `git push --no-verify -u ${remote}${branchArg}`;
   await executeGitCommand(command, options);
 }
 
