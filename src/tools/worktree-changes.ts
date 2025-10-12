@@ -11,6 +11,7 @@ import {
   gitCheckoutFiles,
   executeGitCommand,
   gitDiffFileList,
+  detectWorktreeOwnerRepo,
 } from "@/src/utils/git";
 import { sharedParameters } from "./utils";
 
@@ -526,7 +527,21 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
       };
     }
 
-    const targetPath = process.cwd();
+    const currentDir = process.cwd();
+
+    // Detect the git repository from current directory
+    const ownerRepo = await detectWorktreeOwnerRepo(currentDir);
+    if (!ownerRepo) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `❌ Current directory is not a git repository or worktree.\n\nNavigate to a git repository or worktree first.`,
+          },
+        ],
+      };
+    }
+
     const targetWorkTree = {
       name: worktree.metadata.worktree.name,
       branch: worktree.metadata.worktree.branch,
@@ -535,7 +550,7 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
     const dryRun = !Boolean(avoid_dry_run);
 
     try {
-      const gitOptions = { cwd: targetPath };
+      const gitOptions = { cwd: ownerRepo };
 
       // Get current branch
       const currentBranch = await gitCurrentBranch(gitOptions);
