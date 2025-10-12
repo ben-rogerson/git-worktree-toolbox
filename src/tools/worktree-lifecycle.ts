@@ -145,7 +145,7 @@ export const archiveWorktree = {
   name: "archive",
   description: "Archive a worktree and its matching branch",
   cli: {
-    aliases: ["archive"],
+    aliases: ["archive", "rm"],
     flags: [
       {
         param: "worktree_identifier",
@@ -858,7 +858,7 @@ export const doctorWorktrees = {
   description:
     "Check all worktrees and initialize missing metadata. Run this to ensure all worktrees have proper metadata.",
   cli: {
-    aliases: ["doctor"],
+    aliases: ["doctor", "init"],
     flags: [
       {
         param: "git_repo_path",

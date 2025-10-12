@@ -1,157 +1,113 @@
 import { describe, it, expect } from "vitest";
 import { parseArgs, buildToolAliases } from "../cli-parser";
+import { tools } from "../tools/index";
 import type { McpTool } from "../tools/types";
-
-const mockTools: McpTool[] = [
-  {
-    name: "create_task_worktree",
-    description: "Create a new worktree",
-    parameters: (zod) => ({
-      task_description: zod.string().describe("Task description"),
-      user_id: zod.string().optional().describe("User ID"),
-      avoid_conflicts: zod.boolean().optional().describe("Avoid conflicts"),
-    }),
-    cb: async () => ({ content: [] }),
-    cli: {
-      aliases: ["create", "new"],
-      flags: [
-        { param: "task_description", alias: "t", description: "Task" },
-        { param: "user_id", alias: "u", description: "User" },
-        { param: "avoid_conflicts", alias: "a", description: "Avoid conflicts" },
-      ],
-    },
-  },
-  {
-    name: "list_projects",
-    description: "List all projects",
-    parameters: () => ({}),
-    cb: async () => ({ content: [] }),
-    cli: {
-      aliases: ["list", "ls"],
-    },
-  },
-  {
-    name: "archive_worktree",
-    description: "Archive a worktree",
-    parameters: (zod) => ({
-      path_or_task_id: zod.string().describe("Path or task ID"),
-      is_complete: zod.boolean().optional().describe("Is complete"),
-    }),
-    cb: async () => ({ content: [] }),
-    cli: {
-      flags: [
-        { param: "path_or_task_id", alias: "p", description: "Path" },
-        { param: "is_complete", alias: "c", description: "Complete" },
-      ],
-    },
-  },
-];
 
 describe("CLI Parser", () => {
   describe("parseArgs", () => {
     it("should return server mode when no args", async () => {
-      const result = await parseArgs([], mockTools);
+      const result = await parseArgs([], tools);
       expect(result.mode).toBe("server");
     });
 
     it("should return version mode for --version", async () => {
-      const result = await parseArgs(["--version"], mockTools);
+      const result = await parseArgs(["--version"], tools);
       expect(result.mode).toBe("version");
     });
 
     it("should return version mode for -v", async () => {
-      const result = await parseArgs(["-v"], mockTools);
+      const result = await parseArgs(["-v"], tools);
       expect(result.mode).toBe("version");
     });
 
     it("should return help mode for --help", async () => {
-      const result = await parseArgs(["--help"], mockTools);
+      const result = await parseArgs(["--help"], tools);
       expect(result.mode).toBe("help");
     });
 
     it("should return help mode for -h", async () => {
-      const result = await parseArgs(["-h"], mockTools);
+      const result = await parseArgs(["-h"], tools);
       expect(result.mode).toBe("help");
     });
 
     it("should return help mode for help", async () => {
-      const result = await parseArgs(["help"], mockTools);
+      const result = await parseArgs(["help"], tools);
       expect(result.mode).toBe("help");
     });
 
     it("should resolve tool by name", async () => {
-      const result = await parseArgs(["create_task_worktree"], mockTools);
+      const result = await parseArgs(["create"], tools);
       expect(result.mode).toBe("tool");
-      expect(result.toolName).toBe("create_task_worktree");
+      expect(result.toolName).toBe("create");
     });
 
     it("should resolve tool by alias", async () => {
-      const result = await parseArgs(["create"], mockTools);
-      expect(result.toolName).toBe("create_task_worktree");
+      const result = await parseArgs(["new"], tools);
+      expect(result.toolName).toBe("create");
     });
 
     it("should parse string flags with values", async () => {
       const result = await parseArgs(
         ["create", "--task_description", "Fix bug"],
-        mockTools,
+        tools,
       );
       expect(result.toolArgs?.task_description).toBe("Fix bug");
     });
 
     it("should parse string flags using aliases", async () => {
-      const result = await parseArgs(["create", "-t", "Fix bug"], mockTools);
+      const result = await parseArgs(["create", "-d", "Fix bug"], tools);
       expect(result.toolArgs?.task_description).toBe("Fix bug");
     });
 
     it("should parse boolean flags without values", async () => {
       const result = await parseArgs(
-        ["create", "-t", "Task", "--avoid_conflicts"],
-        mockTools,
+        ["archive", "-i", "task123", "--has_branch_removal"],
+        tools,
       );
-      expect(result.toolArgs?.avoid_conflicts).toBe(true);
+      expect(result.toolArgs?.has_branch_removal).toBe(true);
     });
 
     it("should parse boolean flags using aliases", async () => {
-      const result = await parseArgs(["create", "-t", "Task", "-a"], mockTools);
-      expect(result.toolArgs?.avoid_conflicts).toBe(true);
+      const result = await parseArgs(["archive", "-i", "task123", "-r"], tools);
+      expect(result.toolArgs?.has_branch_removal).toBe(true);
     });
 
     it("should parse multiple flags", async () => {
       const result = await parseArgs(
-        ["create", "-t", "Task", "-u", "user123", "-a"],
-        mockTools,
+        ["create", "-d", "Task", "-b", "main", "-p", "/path/to/repo"],
+        tools,
       );
       expect(result.toolArgs?.task_description).toBe("Task");
-      expect(result.toolArgs?.user_id).toBe("user123");
-      expect(result.toolArgs?.avoid_conflicts).toBe(true);
+      expect(result.toolArgs?.base_branch).toBe("main");
+      expect(result.toolArgs?.git_repo_path).toBe("/path/to/repo");
     });
 
     it("should handle positional argument for first string param", async () => {
-      const result = await parseArgs(["create", "Fix bug"], mockTools);
+      const result = await parseArgs(["create", "Fix bug"], tools);
       expect(result.toolArgs?.task_description).toBe("Fix bug");
     });
 
     it("should throw error for unknown flag", async () => {
-      await expect(
-        parseArgs(["create", "--unknown"], mockTools),
-      ).rejects.toThrow("Unknown flag: --unknown");
+      await expect(parseArgs(["create", "--unknown"], tools)).rejects.toThrow(
+        "Unknown flag: --unknown",
+      );
     });
 
     it("should throw error when string flag missing value", async () => {
-      await expect(parseArgs(["create", "-t"], mockTools)).rejects.toThrow(
-        "Flag -t requires a value",
+      await expect(parseArgs(["create", "-d"], tools)).rejects.toThrow(
+        "Flag -d requires a value",
       );
     });
 
     it("should throw error for unexpected positional argument", async () => {
       await expect(
-        parseArgs(["create", "first", "second"], mockTools),
+        parseArgs(["create", "first", "second"], tools),
       ).rejects.toThrow("Unexpected argument: second");
     });
 
     it("should detect boolean type from parameter name patterns", async () => {
-      const result = await parseArgs(["archive_worktree", "-c"], mockTools);
-      expect(result.toolArgs?.is_complete).toBe(true);
+      const result = await parseArgs(["archive", "-r"], tools);
+      expect(result.toolArgs?.has_branch_removal).toBe(true);
     });
 
     it("should handle tools without CLI config", async () => {
@@ -168,7 +124,7 @@ describe("CLI Parser", () => {
     });
 
     it("should return tool mode for unknown tool names", async () => {
-      const result = await parseArgs(["unknown_tool"], mockTools);
+      const result = await parseArgs(["unknown_tool"], tools);
       expect(result.mode).toBe("tool");
       expect(result.toolName).toBe("unknown_tool");
       expect(result.toolArgs).toEqual({});
@@ -176,26 +132,40 @@ describe("CLI Parser", () => {
 
     it("should handle long flag format (--flag)", async () => {
       const result = await parseArgs(
-        ["archive_worktree", "--path_or_task_id", "/path"],
-        mockTools,
+        ["archive", "--worktree_identifier", "/path"],
+        tools,
       );
-      expect(result.toolArgs?.path_or_task_id).toBe("/path");
+      expect(result.toolArgs?.worktree_identifier).toBe("/path");
     });
 
     it("should handle short flag format (-f)", async () => {
-      const result = await parseArgs(["archive_worktree", "-p", "/path"], mockTools);
-      expect(result.toolArgs?.path_or_task_id).toBe("/path");
+      const result = await parseArgs(["archive", "-i", "/path"], tools);
+      expect(result.toolArgs?.worktree_identifier).toBe("/path");
+    });
+
+    it("should resolve 'rm' alias to archive", async () => {
+      const result = await parseArgs(["rm", "-i", "/path"], tools);
+      expect(result.toolName).toBe("archive");
+      expect(result.toolArgs?.worktree_identifier).toBe("/path");
+    });
+
+    it("should resolve 'init' alias to doctor", async () => {
+      const result = await parseArgs(["init"], tools);
+      expect(result.toolName).toBe("doctor");
     });
   });
 
   describe("buildToolAliases", () => {
     it("should build alias map for all tools", () => {
-      const aliases = buildToolAliases(mockTools);
+      const aliases = buildToolAliases(tools);
 
-      expect(aliases["create"]).toBe("create_task_worktree");
-      expect(aliases["new"]).toBe("create_task_worktree");
-      expect(aliases["list"]).toBe("list_projects");
-      expect(aliases["ls"]).toBe("list_projects");
+      expect(aliases["create"]).toBe("create");
+      expect(aliases["new"]).toBe("create");
+      expect(aliases["list"]).toBe("list");
+      expect(aliases["archive"]).toBe("archive");
+      expect(aliases["rm"]).toBe("archive");
+      expect(aliases["doctor"]).toBe("doctor");
+      expect(aliases["init"]).toBe("doctor");
     });
 
     it("should handle tools without aliases", () => {
