@@ -207,7 +207,11 @@ async function main() {
 
       for (const tool of worktreeTools.tools) {
         const aliases = aliasMap.get(tool.name);
-        const aliasText = aliases ? ` (${aliases.join(", ")})` : "";
+        const filteredAliases = aliases?.filter((alias) => alias !== tool.name);
+        const aliasText =
+          filteredAliases && filteredAliases.length > 0
+            ? ` (${filteredAliases.join(", ")})`
+            : "";
         console.log(`  ${tool.name}${aliasText}`);
         console.log(`    ${tool.description}`);
 
