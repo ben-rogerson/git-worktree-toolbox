@@ -110,9 +110,34 @@ describe("Work Trees", () => {
         ).rejects.toThrow("already exists");
       });
 
-      it("should validate path permissions", async () => {
-        // Mock mkdir to fail (permission denied)
+      it("should validate worktrees folder can be created (early check)", async () => {
+        // Mock mkdir to fail for parent worktrees directory
         mockFs.mkdir.mockRejectedValue(new Error("EACCES: permission denied"));
+
+        await expect(createWorkTree("test", "main")).rejects.toThrow(
+          "Cannot create worktrees folder",
+        );
+      });
+
+      it("should reference BASE_WORKTREES_PATH in error when worktrees folder cannot be created", async () => {
+        // Mock mkdir to fail for parent worktrees directory
+        mockFs.mkdir.mockRejectedValue(new Error("EACCES: permission denied"));
+
+        try {
+          await createWorkTree("test", "main");
+          throw new Error("Expected error to be thrown");
+        } catch (error) {
+          expect((error as Error).message).toContain("BASE_WORKTREES_PATH");
+        }
+      });
+
+      it("should validate path permissions after parent folder check", async () => {
+        // Mock mkdir to succeed for parent dir but fail for final path
+        mockFs.mkdir
+          .mockResolvedValueOnce(undefined) // Parent worktrees dir succeeds
+          .mockRejectedValueOnce(new Error("EACCES: permission denied")); // Final path fails
+
+        mockExecAsync.mockResolvedValueOnce({ stdout: "", stderr: "" }); // listWorkTrees
 
         await expect(createWorkTree("test", "main")).rejects.toThrow(
           "Failed to create directory",

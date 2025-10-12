@@ -119,6 +119,19 @@ export async function createWorkTree(
   }
   const gitOptions = gitRepoPath ? { cwd: gitRepoPath } : {};
 
+  // Early validation: Check if worktrees parent folder can be created
+  const worktreesParentDir = path.dirname(workTreePath);
+  try {
+    await ensureDirectory(worktreesParentDir);
+  } catch (error) {
+    throw createWorkTreeError(
+      `Cannot create worktrees folder at ${worktreesParentDir}. ` +
+        `This may be due to insufficient permissions or an invalid path. ` +
+        `You can customize the worktrees location by setting the BASE_WORKTREES_PATH environment variable.`,
+      "PERMISSION_DENIED",
+    );
+  }
+
   // Validate path permissions by trying to create parent directory
   try {
     const parentDir = path.dirname(workTreePath);
@@ -139,7 +152,8 @@ export async function createWorkTree(
       throw error;
     }
     throw createWorkTreeError(
-      `Permission denied: Cannot create worktree at ${workTreePath}`,
+      `Permission denied: Cannot create worktree at ${workTreePath}. ` +
+        `Check file permissions or set BASE_WORKTREES_PATH environment variable to a writable location.`,
       "PERMISSION_DENIED",
     );
   }
