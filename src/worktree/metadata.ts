@@ -23,6 +23,7 @@ import * as crypto from "crypto";
 import {
   ensureDirectorySync,
   writeFileWithDirectorySync,
+  ensureWorktreesReadme,
 } from "@/src/utils/fs";
 import { gitWorktreeList } from "@/src/utils/git";
 import {
@@ -30,6 +31,7 @@ import {
   ConversationEntry,
   CreateWorktreeOptions,
 } from "@/src/worktree/types";
+import { getGlobalConfig } from "@/src/utils/constants";
 
 const WORKTREE_METADATA_SCHEMA = z.object({
   worktree: z.object({
@@ -106,6 +108,10 @@ export class WorktreeMetadataManager {
 
     // Ensure metadata directory exists
     ensureDirectorySync(metadataDir);
+
+    // Ensure worktrees README exists
+    const { baseWorktreesPath } = getGlobalConfig();
+    ensureWorktreesReadme(baseWorktreesPath);
 
     // Create initial metadata
     const metadata: WorktreeMetadata = {

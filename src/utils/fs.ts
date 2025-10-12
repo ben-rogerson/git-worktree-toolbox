@@ -129,3 +129,67 @@ export async function removeFileOrDirectory(
     );
   }
 }
+
+export function ensureWorktreesReadme(worktreesDir: string): void {
+  const readmePath = path.join(worktreesDir, "README.md");
+
+  if (fsSync.existsSync(readmePath)) {
+    return;
+  }
+
+  const content = `# Git Worktree Toolbox - Worktrees Directory
+
+This directory houses **git worktrees** created by [git-worktree-toolbox](https://github.com/ben-rogerson/git-worktree-toolbox).
+
+## What are Git Worktrees?
+
+Git worktrees let you work on multiple branches simultaneously without switching contexts or stashing changes. Each worktree is a separate working directory linked to the same repository.
+
+## What's This Folder For?
+
+When you create a worktree using \`gwtree\`, it gets organized here by project and task:
+
+\`\`\`
+~/.gwtree/worktrees/
+└── my-project/
+    ├── feature-auth/
+    ├── bugfix-login/
+    └── refactor-api/
+\`\`\`
+
+Each subdirectory is a fully functional git workspace with its own branch, letting you jump between tasks instantly.
+
+## Usage
+
+Create a worktree for a new task:
+\`\`\`bash
+gwtree create my-feature
+\`\`\`
+
+List all worktrees:
+\`\`\`bash
+gwtree list
+\`\`\`
+
+Switch to a worktree:
+\`\`\`bash
+gwtree open my-feature
+\`\`\`
+
+Remove a worktree when done:
+\`\`\`bash
+gwtree remove my-feature
+\`\`\`
+
+---
+
+*This file was automatically generated. Safe to delete - it'll regenerate on next worktree creation.*
+`;
+
+  try {
+    ensureDirectorySync(worktreesDir);
+    fsSync.writeFileSync(readmePath, content, "utf8");
+  } catch (error: unknown) {
+    console.warn(`Failed to create worktrees README: ${error}`);
+  }
+}
