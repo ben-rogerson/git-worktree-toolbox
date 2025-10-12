@@ -282,5 +282,43 @@ describe("WorktreeMetadataManager", () => {
       expect(result.failed[0].path).toBe("/path2");
       expect(result.failed[0].error).toBe("Failed");
     });
+
+    it("should skip worktrees that already have metadata", async () => {
+      const ensureFn = vi.fn().mockResolvedValue(undefined);
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.readFileSync.mockReturnValue(yaml.dump(mockMetadata));
+
+      const result = await WorktreeMetadataManager.ensureMetadataForWorktrees(
+        [testWorktreePath],
+        ensureFn,
+      );
+
+      expect(result.succeeded).toHaveLength(1);
+      expect(ensureFn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("listAllWorktrees", () => {
+    it("should filter out archived worktrees", async () => {
+      const activeMetadata: WorktreeMetadata = {
+        ...mockMetadata,
+        worktree: { ...mockMetadata.worktree, status: "active" },
+      };
+      const archivedMetadata: WorktreeMetadata = {
+        ...mockMetadata,
+        worktree: {
+          ...mockMetadata.worktree,
+          id: "archived-id",
+          status: "archived",
+        },
+      };
+
+      mockFs.readFileSync
+        .mockReturnValueOnce(yaml.dump(activeMetadata))
+        .mockReturnValueOnce(yaml.dump(archivedMetadata));
+
+      expect(activeMetadata.worktree.status).toBe("active");
+      expect(archivedMetadata.worktree.status).toBe("archived");
+    });
   });
 });

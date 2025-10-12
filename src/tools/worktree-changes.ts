@@ -59,9 +59,8 @@ export const worktreeChanges = {
     try {
       // If no identifier provided, show all worktrees
       if (!worktree_identifier) {
-        const worktrees = await WorktreeMetadataManager.listAllWorktrees(
-          process.cwd(),
-        );
+        const cwd = process.cwd();
+        const worktrees = await WorktreeMetadataManager.listAllWorktrees(cwd);
 
         if (worktrees.length === 0) {
           return {
@@ -74,8 +73,26 @@ export const worktreeChanges = {
           };
         }
 
+        // Auto-initialize metadata for worktrees that don't have it
+        const worktreesWithoutMetadata = worktrees.filter(
+          (wt) => !wt.metadata,
+        );
+        if (worktreesWithoutMetadata.length > 0) {
+          const { ensureWorktreeHasMetadata } = await import(
+            "./worktree-lifecycle"
+          );
+          await WorktreeMetadataManager.ensureMetadataForWorktrees(
+            worktreesWithoutMetadata.map((wt) => wt.worktreePath),
+            ensureWorktreeHasMetadata,
+          );
+          // Reload worktrees with newly created metadata
+          const reloadedWorktrees =
+            await WorktreeMetadataManager.listAllWorktrees(cwd);
+          worktrees.length = 0;
+          worktrees.push(...reloadedWorktrees);
+        }
+
         // Identify main worktree by checking current branch
-        const cwd = process.cwd();
         let mainWorktreePath: string | undefined;
         for (const wt of worktrees) {
           try {
@@ -89,9 +106,14 @@ export const worktreeChanges = {
           }
         }
 
+        // Filter to only active worktrees
+        const activeWorktrees = worktrees.filter(
+          (wt) => !wt.metadata || wt.metadata.worktree.status === "active",
+        );
+
         // Collect changes for each worktree
         const worktreeChanges = await Promise.all(
-          worktrees.map(async (wt) => {
+          activeWorktrees.map(async (wt) => {
             const targetWorktreePath = wt.worktreePath;
             const metadata = wt.metadata;
             const isMainTree = targetWorktreePath === mainWorktreePath;
