@@ -235,10 +235,15 @@ export const archiveWorktree = {
                 const currentBranch = await gitCurrentBranch({ cwd: id });
                 // Try to find the owning repository for branch deletion
                 const ownerRepo = await detectWorktreeOwnerRepo(id);
-                const branchCwd = ownerRepo || process.cwd();
+
+                if (!ownerRepo) {
+                  throw new Error(
+                    "Cannot detect owner repository for branch deletion",
+                  );
+                }
 
                 await gitDeleteBranch(currentBranch, false, {
-                  cwd: branchCwd,
+                  cwd: ownerRepo,
                 });
                 branchRemoved = true;
               } catch (error) {
@@ -348,9 +353,14 @@ export const archiveWorktree = {
             const ownerRepo = await detectWorktreeOwnerRepo(
               worktree.worktreePath,
             );
-            const branchCwd = ownerRepo || process.cwd();
 
-            await gitDeleteBranch(branchName, false, { cwd: branchCwd });
+            if (!ownerRepo) {
+              throw new Error(
+                "Cannot detect owner repository for branch deletion",
+              );
+            }
+
+            await gitDeleteBranch(branchName, false, { cwd: ownerRepo });
             branchRemoved = true;
           } catch (error) {
             console.warn(`Failed to remove branch: ${error}`);
