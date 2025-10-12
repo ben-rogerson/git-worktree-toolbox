@@ -222,6 +222,27 @@ describe("WorktreeManager", () => {
       expect(link).toContain("Please create a merge request");
     });
 
+    it("should provide fallback message when remote_url is missing", async () => {
+      const metadataWithoutRemote: WorktreeMetadata = {
+        ...mockMetadata,
+        git_info: {
+          ...mockMetadata.git_info,
+          remote_url: undefined,
+        },
+      };
+
+      mockMetadataManager.getWorktreeByTaskId.mockResolvedValue({
+        worktreePath: "/test/path",
+        metadata: metadataWithoutRemote,
+      });
+
+      const link = await manager.generateMRLinkByTaskId("task-123");
+
+      expect(link).toContain("Please create a merge request");
+      expect(link).toContain("feature-branch");
+      expect(link).toContain("main");
+    });
+
     it("should throw error when worktree not found", async () => {
       mockMetadataManager.getWorktreeByTaskId.mockResolvedValue(null);
 

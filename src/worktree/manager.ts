@@ -144,9 +144,10 @@ export class WorktreeManager {
     const branchName = metadata.worktree.branch;
     const baseBranch = metadata.git_info.base_branch;
 
-    // This is a placeholder - you would replace with your actual GitLab/GitHub URL
-    const repoUrl =
-      metadata.git_info.remote_url || "https://gitlab.com/your-org/your-repo";
+    const repoUrl = metadata.git_info.remote_url;
+    if (!repoUrl) {
+      return `No remote URL found for worktree "${metadata.worktree.name}"`;
+    }
 
     if (repoUrl.includes("gitlab")) {
       const sourceBranch = encodeURIComponent(branchName);
@@ -172,9 +173,10 @@ export class WorktreeManager {
     const branchName = metadata.worktree.branch;
     const baseBranch = metadata.git_info.base_branch;
 
-    // This is a placeholder - you would replace with your actual GitLab/GitHub URL
-    const repoUrl =
-      metadata.git_info.remote_url || "https://gitlab.com/your-org/your-repo";
+    const repoUrl = metadata.git_info.remote_url;
+    if (!repoUrl) {
+      return `No remote URL found for worktree "${metadata.worktree.name}"`;
+    }
 
     if (repoUrl.includes("gitlab")) {
       const sourceBranch = encodeURIComponent(branchName);

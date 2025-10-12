@@ -221,6 +221,19 @@ export async function gitHasRemote(
   }
 }
 
+export async function gitGetRemoteUrl(
+  remote = "origin",
+  options: GitCommandOptions = {},
+): Promise<string | null> {
+  try {
+    const command = `git remote get-url ${remote}`;
+    const result = await executeGitCommand(command, options);
+    return result.stdout.trim();
+  } catch {
+    return null;
+  }
+}
+
 export async function gitPush(
   remote = "origin",
   branch?: string,

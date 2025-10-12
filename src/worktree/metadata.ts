@@ -113,6 +113,12 @@ export class WorktreeMetadataManager {
     const { baseWorktreesPath } = getGlobalConfig();
     ensureWorktreesReadme(baseWorktreesPath);
 
+    // Get remote URL from git
+    const { gitGetRemoteUrl } = await import("@/src/utils/git");
+    const remoteUrl = await gitGetRemoteUrl("origin", {
+      cwd: worktreePath,
+    });
+
     // Create initial metadata
     const metadata: WorktreeMetadata = {
       worktree: {
@@ -131,6 +137,7 @@ export class WorktreeMetadataManager {
       git_info: {
         base_branch: options.base_branch || "main",
         current_branch: options.branch,
+        remote_url: remoteUrl || undefined,
       },
     };
 
