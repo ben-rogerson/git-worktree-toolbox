@@ -13,7 +13,6 @@
  * All operations include Zod validation for type safety.
  */
 
-import z from "zod";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
@@ -25,47 +24,14 @@ import {
   writeFileWithDirectorySync,
   ensureWorktreesReadme,
 } from "@/src/utils/fs";
-import { gitWorktreeList } from "@/src/utils/git";
+import { gitWorktreeList, getDefaultBranch } from "@/src/utils/git";
 import {
   WorktreeMetadata,
   ConversationEntry,
   CreateWorktreeOptions,
 } from "@/src/worktree/types";
 import { getGlobalConfig } from "@/src/utils/constants";
-
-const WORKTREE_METADATA_SCHEMA = z.object({
-  worktree: z.object({
-    id: z.string(),
-    name: z.string(),
-    path: z.string(),
-    branch: z.string(),
-    created_at: z.string(),
-    created_by: z.string(),
-    status: z.enum(["active", "completed", "archived"]),
-  }),
-  team: z.object({
-    assigned_users: z.array(
-      z.object({
-        user_id: z.string(),
-        role: z.enum(["owner", "collaborator"]),
-        joined_at: z.string(),
-      }),
-    ),
-  }),
-  conversation_history: z.array(
-    z.object({
-      id: z.string(),
-      timestamp: z.string(),
-      user_id: z.string().optional(),
-      prompt: z.string(),
-      response: z.string(),
-    }),
-  ),
-  git_info: z.object({
-    base_branch: z.string(),
-    current_branch: z.string(),
-  }),
-});
+import { WORKTREE_METADATA_SCHEMA } from "@/src/schemas/config-schema";
 
 export class WorktreeMetadataManager {
   private static readonly METADATA_FILE = "task.config.yaml";
@@ -113,11 +79,12 @@ export class WorktreeMetadataManager {
     const { baseWorktreesPath } = getGlobalConfig();
     ensureWorktreesReadme(baseWorktreesPath);
 
-    // Get remote URL from git
+    // Get remote URL from git and default branch
     const { gitGetRemoteUrl } = await import("@/src/utils/git");
     const remoteUrl = await gitGetRemoteUrl("origin", {
       cwd: worktreePath,
     });
+    const defaultBranch = await getDefaultBranch({ cwd: worktreePath });
 
     // Create initial metadata
     const metadata: WorktreeMetadata = {
@@ -135,7 +102,7 @@ export class WorktreeMetadataManager {
       },
       conversation_history: [],
       git_info: {
-        base_branch: options.base_branch || "main",
+        base_branch: options.base_branch || defaultBranch,
         current_branch: options.branch,
         remote_url: remoteUrl || undefined,
       },
@@ -232,13 +199,14 @@ export class WorktreeMetadataManager {
         (rawMetadata.worktree as any)?.created_at || new Date().toISOString();
       const status = (rawMetadata.worktree as any)?.status || "active";
 
-      // Get current branch
-      let currentBranch = "main";
+      // Get current branch and default branch
+      const defaultBranch = await getDefaultBranch({ cwd: worktreePath });
+      let currentBranch = defaultBranch;
       try {
         const { gitCurrentBranch } = await import("@/src/utils/git");
         currentBranch = await gitCurrentBranch({ cwd: worktreePath });
       } catch {
-        // Default to main if we can't determine
+        // Default to default branch if we can't determine
       }
 
       // Repair conversation history by fixing malformed entries
@@ -281,7 +249,7 @@ export class WorktreeMetadataManager {
       // Extract git info
       const gitInfoRaw = rawMetadata.git_info as any;
       const gitInfo = {
-        base_branch: gitInfoRaw?.base_branch || "main",
+        base_branch: gitInfoRaw?.base_branch || defaultBranch,
         current_branch: currentBranch,
       };
 

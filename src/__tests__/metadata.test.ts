@@ -8,6 +8,12 @@ vi.mock("fs");
 vi.mock("uuid", () => ({
   v4: vi.fn(() => "test-uuid-123"),
 }));
+vi.mock("@/src/utils/git", () => ({
+  gitGetRemoteUrl: vi.fn().mockResolvedValue("https://github.com/test/repo"),
+  getDefaultBranch: vi.fn().mockResolvedValue("main"),
+  gitCurrentBranch: vi.fn().mockResolvedValue("test-branch"),
+  gitWorktreeList: vi.fn().mockResolvedValue(""),
+}));
 
 const mockFs = vi.mocked(fs);
 

@@ -4,69 +4,16 @@
 
 import * as path from "path";
 import * as fsPromises from "fs/promises";
-import { z } from "zod";
 import { executeGitCommand } from "@/src/utils/git";
 import type { WorkTree } from "@/src/worktree/types";
-
-type ZodNamespace = typeof z;
+import { sharedParameters } from "@/src/schemas/config-schema";
 
 // ============================================================================
 // Type Definitions
 // ============================================================================
 
-// ============================================================================
-// Shared Parameter Schemas
-// ============================================================================
-
-/**
- * Shared parameter schemas for common tool parameters
- */
-export const sharedParameters = {
-  /**
-   * Worktree identifier parameter - accepts task ID, worktree name, or absolute path
-   */
-  worktree_identifier: (z: ZodNamespace) =>
-    z
-      .string()
-      .optional()
-      .describe(
-        "Task ID, worktree name, or absolute path to the worktree (defaults to current directory)",
-      ),
-
-  /**
-   * Git repository path parameter
-   */
-  git_repo_path: (z: ZodNamespace) =>
-    z.string().describe("Path to the Git repository directory"),
-
-  /**
-   * Optional git repository path parameter
-   */
-  git_repo_path_optional: (z: ZodNamespace) =>
-    z
-      .string()
-      .optional()
-      .describe(
-        "Path to the Git repository directory (defaults to current directory)",
-      ),
-
-  /**
-   * Task ID parameter
-   */
-  task_id: (z: ZodNamespace) => z.string().describe("Task ID of the worktree"),
-
-  /**
-   * Worktree name parameter
-   */
-  worktree_name: (z: ZodNamespace) =>
-    z.string().describe("Name of the worktree"),
-
-  /**
-   * Base branch parameter
-   */
-  base_branch_optional: (z: ZodNamespace) =>
-    z.string().optional().describe("Base branch (default: main)"),
-};
+// Re-export sharedParameters for backward compatibility
+export { sharedParameters };
 
 export interface ValidationError {
   [x: string]: unknown;

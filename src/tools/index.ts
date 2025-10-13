@@ -8,6 +8,10 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { WorktreeManager } from "../worktree/manager.js";
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import type { McpTool } from "./types.js";
+import {
+  MCP_TOOLS_LIST_REQUEST_SCHEMA,
+  MCP_TOOLS_CALL_REQUEST_SCHEMA,
+} from "@/src/schemas/config-schema";
 
 // Worktree Lifecycle Tools
 import {
@@ -50,34 +54,23 @@ export const tools = [
 export function register(server: Server, config: WorktreeMcpToolsConfig) {
   const worktreeManager = new WorktreeManager(config);
 
-  server.setRequestHandler(
-    z.object({
-      method: z.literal("tools/list"),
+  server.setRequestHandler(MCP_TOOLS_LIST_REQUEST_SCHEMA, async () => ({
+    tools: tools.map((tool) => {
+      const schema = z.object(tool.parameters(z));
+      const jsonSchema = zodToJsonSchema(schema, {
+        target: "openApi3",
+        $refStrategy: "none",
+      });
+      return {
+        name: tool.name,
+        description: tool.description,
+        inputSchema: jsonSchema,
+      };
     }),
-    async () => ({
-      tools: tools.map((tool) => {
-        const schema = z.object(tool.parameters(z));
-        const jsonSchema = zodToJsonSchema(schema, {
-          target: "openApi3",
-          $refStrategy: "none",
-        });
-        return {
-          name: tool.name,
-          description: tool.description,
-          inputSchema: jsonSchema,
-        };
-      }),
-    }),
-  );
+  }));
 
   server.setRequestHandler(
-    z.object({
-      method: z.literal("tools/call"),
-      params: z.object({
-        name: z.string(),
-        arguments: z.record(z.unknown()).optional(),
-      }),
-    }),
+    MCP_TOOLS_CALL_REQUEST_SCHEMA,
     async (
       request,
     ): Promise<{

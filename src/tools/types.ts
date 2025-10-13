@@ -2,19 +2,9 @@
 
 import { WorktreeManager } from "@/src/worktree/manager";
 import { z, type ZodType } from "zod";
+import { CliConfig } from "@/src/schemas/config-schema";
 
 type ZodNamespace = typeof z;
-
-export type CliFlagDefinition = {
-  param: string;
-  alias: string;
-  description: string;
-};
-
-export type CliConfig = {
-  aliases?: string[];
-  flags?: CliFlagDefinition[];
-};
 
 export type McpTool = {
   name: string;
