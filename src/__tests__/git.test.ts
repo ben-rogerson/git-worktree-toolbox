@@ -15,6 +15,7 @@ import {
   gitWorktreeList,
   gitCheckoutFiles,
   gitHasPendingChanges,
+  getDefaultBranch,
 } from "../utils/git";
 
 describe("Git Utilities", () => {
@@ -173,6 +174,79 @@ describe("Git Utilities", () => {
         "git worktree list --porcelain",
         expect.any(Object),
       );
+    });
+  });
+
+  describe("getDefaultBranch", () => {
+    it("should return default branch from symbolic-ref", async () => {
+      mockExecAsync.mockResolvedValue({
+        stdout: "refs/remotes/origin/main\n",
+        stderr: "",
+      });
+
+      const result = await getDefaultBranch();
+
+      expect(result).toBe("main");
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        "git symbolic-ref refs/remotes/origin/HEAD",
+        expect.any(Object),
+      );
+    });
+
+    it("should return main when it exists as fallback", async () => {
+      mockExecAsync
+        .mockRejectedValueOnce(new Error("symbolic-ref failed"))
+        .mockResolvedValueOnce({ stdout: "", stderr: "" });
+
+      const result = await getDefaultBranch();
+
+      expect(result).toBe("main");
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        "git show-ref --verify refs/heads/main",
+        expect.any(Object),
+      );
+    });
+
+    it("should return master when it exists as fallback", async () => {
+      mockExecAsync
+        .mockRejectedValueOnce(new Error("symbolic-ref failed"))
+        .mockRejectedValueOnce(new Error("main doesn't exist"))
+        .mockResolvedValueOnce({ stdout: "", stderr: "" });
+
+      const result = await getDefaultBranch();
+
+      expect(result).toBe("master");
+    });
+
+    it("should create main branch when no default exists", async () => {
+      mockExecAsync
+        .mockRejectedValueOnce(new Error("symbolic-ref failed"))
+        .mockRejectedValueOnce(new Error("main doesn't exist"))
+        .mockRejectedValueOnce(new Error("master doesn't exist"))
+        .mockRejectedValueOnce(new Error("develop doesn't exist"))
+        .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitHasCommits
+        .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitBranchExists
+        .mockResolvedValueOnce({ stdout: "", stderr: "" }); // gitCreateBranch
+
+      const result = await getDefaultBranch();
+
+      expect(result).toBe("main");
+    });
+
+    it("should create initial commit when no commits exist", async () => {
+      mockExecAsync
+        .mockRejectedValueOnce(new Error("symbolic-ref failed"))
+        .mockRejectedValueOnce(new Error("main doesn't exist"))
+        .mockRejectedValueOnce(new Error("master doesn't exist"))
+        .mockRejectedValueOnce(new Error("develop doesn't exist"))
+        .mockRejectedValueOnce(new Error("no commits")) // gitHasCommits
+        .mockResolvedValueOnce({ stdout: "", stderr: "" }) // gitCreateInitialCommit
+        .mockRejectedValueOnce(new Error("branch doesn't exist")) // gitBranchExists
+        .mockResolvedValueOnce({ stdout: "", stderr: "" }); // gitCreateBranch
+
+      const result = await getDefaultBranch();
+
+      expect(result).toBe("main");
     });
   });
 });

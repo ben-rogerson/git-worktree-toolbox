@@ -390,6 +390,11 @@ branch refs/heads/feature
                 "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
               stderr: "",
             })
+            // getDefaultBranch call
+            .mockResolvedValueOnce({
+              stdout: "refs/remotes/origin/main",
+              stderr: "",
+            })
             // git worktree prune (first call)
             .mockResolvedValueOnce({ stdout: "", stderr: "" })
             // git worktree list --porcelain (for validation)
@@ -412,6 +417,11 @@ branch refs/heads/feature
             .mockResolvedValueOnce({
               stdout:
                 "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
+              stderr: "",
+            })
+            // getDefaultBranch call
+            .mockResolvedValueOnce({
+              stdout: "refs/remotes/origin/main",
               stderr: "",
             })
             // git worktree prune (first call)
@@ -480,6 +490,11 @@ branch refs/heads/feature
             .mockResolvedValueOnce({
               stdout:
                 "worktree /path/to/test-branch\nbranch refs/heads/test\n\n",
+              stderr: "",
+            })
+            // getDefaultBranch call
+            .mockResolvedValueOnce({
+              stdout: "refs/remotes/origin/main",
               stderr: "",
             })
             // git worktree prune (first call)

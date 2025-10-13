@@ -22,6 +22,7 @@ import {
   gitCreateBranch,
   gitHasCommits,
   gitCreateInitialCommit,
+  getDefaultBranch,
 } from "@/src/utils/git";
 import { ensureDirectory } from "@/src/utils/fs";
 import { assertGitRepoPath } from "@/src/tools/utils";
@@ -307,13 +308,14 @@ export async function removeWorkTree(
     // Prevent removal of main work tree with multiple checks
     const currentDir = process.cwd();
     const targetPath = path.resolve(targetWorkTree.path);
+    const defaultBranch = await getDefaultBranch();
 
     if (
       targetPath === currentDir ||
       targetPath === path.resolve(".") ||
       targetWorkTree.path.endsWith("/.") ||
       targetWorkTree.path === "." ||
-      (targetWorkTree.branch === "main" &&
+      (targetWorkTree.branch === defaultBranch &&
         targetPath.includes(path.basename(currentDir)))
     ) {
       throw createWorkTreeError(

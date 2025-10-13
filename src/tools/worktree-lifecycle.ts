@@ -16,6 +16,7 @@ import {
   gitDeleteBranch,
   gitCurrentBranch,
   detectWorktreeOwnerRepo,
+  getDefaultBranch,
 } from "@/src/utils/git";
 
 import {
@@ -503,15 +504,15 @@ export const cleanWorktrees = {
       }> = [];
 
       // Check each worktree for changes
+      const defaultBranch = await getDefaultBranch();
       for (const worktree of worktrees) {
-        // First check if this is the main workspace (main/master branch)
+        // First check if this is the main workspace (default branch)
         let isMainWorkspace = false;
         try {
           const currentBranch = await gitCurrentBranch({
             cwd: worktree.worktreePath,
           });
-          isMainWorkspace =
-            currentBranch === "main" || currentBranch === "master";
+          isMainWorkspace = currentBranch === defaultBranch;
         } catch (error) {
           // If we can't determine the branch, be conservative and don't archive
           console.warn(
@@ -523,7 +524,7 @@ export const cleanWorktrees = {
           workspacesWithChanges.push({
             worktreePath: worktree.worktreePath,
             metadata: worktree.metadata,
-            reason: "main workspace (main/master branch) - never archived",
+            reason: `main workspace (${defaultBranch} branch) - never archived`,
           });
           continue;
         }
@@ -553,7 +554,7 @@ export const cleanWorktrees = {
           }
 
           // Check if worktree has committed changes compared to base branch
-          const baseBranch = worktree.metadata.git_info?.base_branch || "main";
+          const baseBranch = worktree.metadata.git_info?.base_branch || defaultBranch;
           let hasCommittedChanges = false;
 
           try {
@@ -843,17 +844,18 @@ export async function ensureWorktreeHasMetadata(
   // Initialize metadata
   const worktreeName = path.basename(worktreePath);
 
-  // Get current branch
-  let currentBranch = "main";
+  // Get current branch and default branch
+  const defaultBranch = await getDefaultBranch();
+  let currentBranch = defaultBranch;
   try {
     currentBranch = await gitCurrentBranch({ cwd: worktreePath });
   } catch {
-    // Default to main if we can't determine
+    // Default to default branch if we can't determine
   }
 
   await WorktreeMetadataManager.createMetadata(worktreePath, {
     task_description: DEFAULT_TASK_DESCRIPTION,
-    base_branch: "main",
+    base_branch: defaultBranch,
     worktree_name: worktreeName,
     branch: currentBranch,
   });
@@ -936,19 +938,20 @@ export const doctorWorktrees = {
 
       for (const missing of missingMetadata) {
         try {
-          // Get current branch
-          let currentBranch = "main";
+          // Get current branch and default branch
+          const defaultBranch = await getDefaultBranch();
+          let currentBranch = defaultBranch;
           try {
             currentBranch = await gitCurrentBranch({ cwd: missing.path });
           } catch {
-            // Default to main if we can't determine
+            // Default to default branch if we can't determine
           }
 
           const metadata = await WorktreeMetadataManager.createMetadata(
             missing.path,
             {
               task_description: DEFAULT_TASK_DESCRIPTION,
-              base_branch: "main",
+              base_branch: defaultBranch,
               worktree_name: missing.name,
               branch: currentBranch,
             },

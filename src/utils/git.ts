@@ -469,3 +469,42 @@ export async function gitCreateInitialCommit(
   const command = 'git commit --allow-empty -m "Initial commit"';
   await executeGitCommand(command, options);
 }
+
+export async function getDefaultBranch(
+  options: GitCommandOptions = {},
+): Promise<string> {
+  try {
+    const result = await executeGitCommand(
+      "git symbolic-ref refs/remotes/origin/HEAD",
+      options,
+    );
+    return result.stdout.trim().replace("refs/remotes/origin/", "");
+  } catch {
+    // symbolic-ref failed, check for common default branches
+    const commonDefaults = ["main", "master", "develop"];
+    for (const branch of commonDefaults) {
+      try {
+        await executeGitCommand(
+          `git show-ref --verify refs/heads/${branch}`,
+          options,
+        );
+        return branch;
+      } catch {
+        // Branch doesn't exist, continue checking
+      }
+    }
+
+    // No default branch exists, create 'main'
+    const hasCommits = await gitHasCommits(options);
+    if (!hasCommits) {
+      await gitCreateInitialCommit(options);
+    }
+
+    const branchExists = await gitBranchExists("main", options);
+    if (!branchExists) {
+      await gitCreateBranch("main", "HEAD", options);
+    }
+
+    return "main";
+  }
+}

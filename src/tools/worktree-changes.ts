@@ -12,6 +12,7 @@ import {
   executeGitCommand,
   gitDiffFileList,
   detectWorktreeOwnerRepo,
+  getDefaultBranch,
 } from "@/src/utils/git";
 import { sharedParameters } from "./utils";
 
@@ -94,11 +95,12 @@ export const worktreeChanges = {
         }
 
         // Identify main worktree by checking current branch
+        const defaultBranch = await getDefaultBranch();
         let mainWorktreePath: string | undefined;
         for (const wt of worktrees) {
           try {
             const branch = await gitCurrentBranch({ cwd: wt.worktreePath });
-            if (branch === "main" || branch === "master") {
+            if (branch === defaultBranch) {
               mainWorktreePath = wt.worktreePath;
               break;
             }
@@ -146,12 +148,12 @@ export const worktreeChanges = {
             // Get diff stats for committed changes
             let diffStats = { files: 0, insertions: 0, deletions: 0 };
             try {
-              diffStats = await gitDiffStats("main", "HEAD", {
+              diffStats = await gitDiffStats(defaultBranch, "HEAD", {
                 cwd: targetWorktreePath,
               });
             } catch {
               try {
-                diffStats = await gitDiffStats("origin/main", "HEAD", {
+                diffStats = await gitDiffStats(`origin/${defaultBranch}`, "HEAD", {
                   cwd: targetWorktreePath,
                 });
               } catch {
@@ -366,16 +368,15 @@ export const worktreeChanges = {
       }
 
       // Get diff stats for committed changes
+      const defaultBranch = await getDefaultBranch();
       let diffStats = { files: 0, insertions: 0, deletions: 0 };
       try {
-        // Try diff from main branch first
-        diffStats = await gitDiffStats("main", "HEAD", {
+        diffStats = await gitDiffStats(defaultBranch, "HEAD", {
           cwd: targetWorktreePath,
         });
       } catch {
         try {
-          // Fallback: try diff from origin/main
-          diffStats = await gitDiffStats("origin/main", "HEAD", {
+          diffStats = await gitDiffStats(`origin/${defaultBranch}`, "HEAD", {
             cwd: targetWorktreePath,
           });
         } catch {

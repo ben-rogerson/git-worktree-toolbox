@@ -118,6 +118,7 @@ describe("cleanWorktrees", () => {
       ];
 
       mockMetadataManager.listAllWorktrees.mockResolvedValue(worktrees);
+      mockGitUtils.getDefaultBranch.mockResolvedValue("main");
       mockGitUtils.gitCurrentBranch.mockResolvedValue("main");
       mockGitUtils.gitHasPendingChanges.mockResolvedValue(false);
       mockGitUtils.gitDiffStats.mockResolvedValue({
@@ -132,7 +133,7 @@ describe("cleanWorktrees", () => {
       );
 
       expect(result.content[0].text).toContain(
-        "main workspace (main/master branch) - never archived",
+        "main workspace (main branch) - never archived",
       );
       expect(result.content[0].text).toContain("Workspaces to archive: 0");
       expect(result.content[0].text).toContain("Workspaces with changes: 1");
@@ -154,6 +155,7 @@ describe("cleanWorktrees", () => {
       ];
 
       mockMetadataManager.listAllWorktrees.mockResolvedValue(worktrees);
+      mockGitUtils.getDefaultBranch.mockResolvedValue("master");
       mockGitUtils.gitCurrentBranch.mockResolvedValue("master");
       mockGitUtils.gitHasPendingChanges.mockResolvedValue(false);
       mockGitUtils.gitDiffStats.mockResolvedValue({
@@ -168,7 +170,7 @@ describe("cleanWorktrees", () => {
       );
 
       expect(result.content[0].text).toContain(
-        "main workspace (main/master branch) - never archived",
+        "main workspace (master branch) - never archived",
       );
       expect(result.content[0].text).toContain("Workspaces to archive: 0");
     });
@@ -500,6 +502,8 @@ describe("cleanWorktrees", () => {
 
       mockMetadataManager.listAllWorktrees.mockResolvedValue(worktrees);
 
+      mockGitUtils.getDefaultBranch.mockResolvedValue("main");
+
       // Mock different responses for different worktrees
       mockGitUtils.gitCurrentBranch
         .mockResolvedValueOnce("main") // Main workspace
@@ -528,7 +532,7 @@ describe("cleanWorktrees", () => {
       expect(result.content[0].text).toContain("Workspaces to archive: 2");
       expect(result.content[0].text).toContain("Workspaces with changes: 2");
       expect(result.content[0].text).toContain(
-        "main workspace (main/master branch) - never archived",
+        "main workspace (main branch) - never archived",
       );
       expect(result.content[0].text).toContain("has uncommitted changes");
       expect(result.content[0].text).toContain(
