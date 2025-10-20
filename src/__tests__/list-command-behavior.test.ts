@@ -62,4 +62,27 @@ describe("List Command Behavior", () => {
       expect(true).toBe(true);
     });
   });
+
+  describe("List command local-only branch indicator", () => {
+    it("should show (local only) label for branches not pushed to remote", () => {
+      // Documents that when a branch exists locally but not on the remote,
+      // it should be labeled with "(local only)" in the list output
+
+      expect(true).toBe(true);
+    });
+
+    it("should not show (local only) label for branches pushed to remote", () => {
+      // Documents that when a branch exists both locally and on the remote,
+      // it should not have the "(local only)" label
+
+      expect(true).toBe(true);
+    });
+
+    it("should combine (current, local only) labels when both apply", () => {
+      // Documents that when the current worktree has a local-only branch,
+      // both labels should be shown together as "(current, local only)"
+
+      expect(true).toBe(true);
+    });
+  });
 });

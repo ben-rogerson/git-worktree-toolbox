@@ -11,7 +11,10 @@ import type { WorktreeManager } from "@/src/worktree/manager";
 import { WorktreeMetadataManager } from "@/src/worktree/metadata";
 import type { WorktreeMetadata } from "@/src/worktree/types";
 import { ensureWorktreeHasMetadata } from "./worktree-lifecycle";
-import { detectWorktreeOwnerRepo } from "@/src/utils/git";
+import {
+  detectWorktreeOwnerRepo,
+  gitBranchHasRemote,
+} from "@/src/utils/git";
 import { sharedParameters } from "./utils";
 
 // ============================================================================
@@ -270,7 +273,9 @@ async function buildWorktreesList(projectPath: string): Promise<string> {
       return "";
     }
 
-    const worktreeEntries = worktrees.map((wt) => buildWorktreeEntry(wt));
+    const worktreeEntries = await Promise.all(
+      worktrees.map((wt) => buildWorktreeEntry(wt, projectPath)),
+    );
 
     return `     • Worktrees (${worktrees.length}):
 ${worktreeEntries.join("")}`;
@@ -281,14 +286,26 @@ ${worktreeEntries.join("")}`;
   }
 }
 
-function buildWorktreeEntry(wt: {
-  worktreePath: string;
-  metadata: WorktreeMetadata | null;
-}): string {
+async function buildWorktreeEntry(
+  wt: {
+    worktreePath: string;
+    metadata: WorktreeMetadata | null;
+  },
+  projectPath: string,
+): Promise<string> {
   const labels = [];
   if (wt.worktreePath === process.cwd()) {
     labels.push("current");
   }
+
+  if (wt.metadata) {
+    const branch = wt.metadata.worktree.branch;
+    const hasRemote = await gitBranchHasRemote(branch, { cwd: projectPath });
+    if (!hasRemote) {
+      labels.push("local only");
+    }
+  }
+
   const labelSuffix = labels.length > 0 ? ` (${labels.join(", ")})` : "";
 
   if (wt.metadata) {

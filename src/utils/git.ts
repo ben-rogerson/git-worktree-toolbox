@@ -508,3 +508,16 @@ export async function getDefaultBranch(
     return "main";
   }
 }
+
+export async function gitBranchHasRemote(
+  branch: string,
+  options: GitCommandOptions = {},
+): Promise<boolean> {
+  try {
+    const command = `git rev-parse --verify "refs/remotes/origin/${branch}"`;
+    await executeGitCommand(command, options);
+    return true;
+  } catch {
+    return false;
+  }
+}
