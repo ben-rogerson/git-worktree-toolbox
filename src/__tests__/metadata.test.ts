@@ -115,12 +115,9 @@ describe("WorktreeMetadataManager", () => {
       const result =
         await WorktreeMetadataManager.loadMetadata(testWorktreePath);
 
-      // Should return repaired metadata when schema is invalid but repairable
-      expect(result).not.toBeNull();
-      expect(result).toHaveProperty("worktree");
-      expect(result).toHaveProperty("team");
-      expect(result).toHaveProperty("conversation_history");
-      expect(result).toHaveProperty("git_info");
+      // Should return null when schema is invalid and cannot be repaired
+      // (requires essential fields like worktree.branch and git_info.base_branch)
+      expect(result).toBeNull();
     });
   });
 

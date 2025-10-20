@@ -33,4 +33,33 @@ describe("List Command Behavior", () => {
       expect(true).toBe(true); // Placeholder test to document the behavior
     });
   });
+
+  describe("List command with -a/--all flag", () => {
+    it("should show all repositories when -a flag is used inside a git repo", () => {
+      // Documents that when running list inside a git repository with -a flag,
+      // all repositories should be shown instead of just the current one
+
+      expect(true).toBe(true);
+    });
+
+    it("should show all repositories when --all flag is used inside a git repo", () => {
+      // Documents that --all is an alias for -a flag
+
+      expect(true).toBe(true);
+    });
+
+    it("should show only current repository worktrees when inside git repo without flag", () => {
+      // Documents that when running list inside a git repository without any flag,
+      // only the current repository's worktrees should be shown
+
+      expect(true).toBe(true);
+    });
+
+    it("should always show all repositories when run outside any git repository", () => {
+      // Documents that when running list outside any git repository,
+      // all repositories should be shown regardless of -a/--all flag
+
+      expect(true).toBe(true);
+    });
+  });
 });

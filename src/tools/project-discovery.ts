@@ -9,6 +9,7 @@ import * as os from "os";
 import type { McpTool } from "@/src/tools/types";
 import type { WorktreeManager } from "@/src/worktree/manager";
 import { WorktreeMetadataManager } from "@/src/worktree/metadata";
+import type { WorktreeMetadata } from "@/src/worktree/types";
 import { ensureWorktreeHasMetadata } from "./worktree-lifecycle";
 import { detectWorktreeOwnerRepo } from "@/src/utils/git";
 import { sharedParameters } from "./utils";
@@ -203,46 +204,160 @@ function discoverProjects(customDirectories?: string[]): DiscoveredProject[] {
   return projects;
 }
 
+function buildAllReposHeader(
+  projects: DiscoveredProject[],
+  scannedDirs: string[],
+  worktreeManager: WorktreeManager,
+): string {
+  const scannedDirsList = scannedDirs.map((dir) => `  • ${dir}`).join("\n");
+  const configuredDirectories = worktreeManager.projectDirectories;
+  const directoryTip =
+    configuredDirectories && configuredDirectories.length > 0
+      ? `💡 PROJECT_DIRECTORIES has been set.`
+      : `💡 Set dirs with the PROJECT_DIRECTORIES env var\neg: \`export PROJECT_DIRECTORIES="$HOME/Projects:$HOME/Code"\`.`;
+
+  return `📂 Discovered Projects (${projects.length} total)
+
+Scanned directories:
+${scannedDirsList}
+
+${directoryTip}
+
+`;
+}
+
+function buildCurrentRepoHeader(repoPath: string): string {
+  return `🌳 Current Repository Worktrees
+
+Repository: ${repoPath}
+💡 Use -a or --all flag to show all repositories
+
+`;
+}
+
+async function buildWorktreesSection(
+  projectsWithWorktrees: DiscoveredProject[],
+): Promise<string> {
+  if (projectsWithWorktrees.length === 0) {
+    return `No projects with worktrees found.\n`;
+  }
+
+  const projectSections = await Promise.all(
+    projectsWithWorktrees.map((project) => buildProjectSection(project)),
+  );
+
+  return `Projects with worktrees (${projectsWithWorktrees.length}):
+${projectSections.join("")}
+`;
+}
+
+async function buildProjectSection(
+  project: DiscoveredProject,
+): Promise<string> {
+  const worktreesList = await buildWorktreesList(project.path);
+
+  return `  ✅ ${project.name}
+     • Path: ${project.path}
+${worktreesList}`;
+}
+
+async function buildWorktreesList(projectPath: string): Promise<string> {
+  try {
+    const worktrees =
+      await WorktreeMetadataManager.listAllWorktrees(projectPath);
+
+    if (worktrees.length === 0) {
+      return "";
+    }
+
+    const worktreeEntries = worktrees.map((wt) => buildWorktreeEntry(wt));
+
+    return `     • Worktrees (${worktrees.length}):
+${worktreeEntries.join("")}`;
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    return `     • Error loading worktrees: ${errorMessage}\n`;
+  }
+}
+
+function buildWorktreeEntry(wt: {
+  worktreePath: string;
+  metadata: WorktreeMetadata | null;
+}): string {
+  const labels = [];
+  if (wt.worktreePath === process.cwd()) {
+    labels.push("current");
+  }
+  const labelSuffix = labels.length > 0 ? ` (${labels.join(", ")})` : "";
+
+  if (wt.metadata) {
+    return `       - ${wt.metadata.worktree.name}${labelSuffix} (${wt.metadata.worktree.branch})\n`;
+  }
+
+  const pathParts = wt.worktreePath.split("/");
+  const folderName = pathParts[pathParts.length - 1];
+  return `       - ${folderName}${labelSuffix} (no metadata)\n`;
+}
+
 export const listProjects = {
   name: "list",
   description: "Show git repositories with worktrees",
   cli: {
     aliases: ["list"],
-    flags: [],
+    flags: [
+      {
+        param: "all",
+        alias: "a",
+        description: "Show all worktrees across all repositories",
+      },
+    ],
   },
   cliFooter:
     "💡 Run `gwtree changes <identifier>` to see changes in a worktree\n💡 Run `gwtree create <description>` to create a new worktree",
   mcpFooter:
     '💡 Use the "changes" tool with a worktree identifier to see detailed changes\n💡 Use the "create" tool to create a new worktree for a task',
-  parameters: () => ({}),
+  parameters: (z) => ({
+    all: z
+      .boolean()
+      .optional()
+      .describe("Show all worktrees across all repositories"),
+  }),
   cb: async (
     _args: Record<string, unknown>,
     { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
+    const { all } = _args as { all?: boolean };
+
     try {
-      // Check if we're currently in a worktree
+      // Check if we're currently in a git repository
       const currentDir = process.cwd();
+      const isInGitRepo = isGitRepository(currentDir);
       const ownerRepo = await detectWorktreeOwnerRepo(currentDir);
 
       let projects: DiscoveredProject[];
       let scannedDirs: string[];
+      let showAllRepos = false;
 
-      if (ownerRepo) {
-        // We're in a worktree, only show worktrees for the current project
-        const projectName = path.basename(ownerRepo);
-        projects = [
-          {
-            name: projectName,
-            path: ownerRepo,
-            hasWorktrees: hasWorktrees(ownerRepo),
-          },
-        ];
-        scannedDirs = [ownerRepo];
-      } else {
-        // Normal behavior - scan all configured directories
+      const isOutsideGitRepo = !isInGitRepo && !ownerRepo;
+      const shouldShowAllRepos = isOutsideGitRepo || all;
+
+      if (shouldShowAllRepos) {
+        showAllRepos = true;
         const configuredDirectories = worktreeManager.projectDirectories;
         projects = discoverProjects(configuredDirectories);
         scannedDirs = getScannedDirectories(configuredDirectories);
+      } else {
+        const repoPath = ownerRepo || currentDir;
+        const projectName = path.basename(repoPath);
+        projects = [
+          {
+            name: projectName,
+            path: repoPath,
+            hasWorktrees: hasWorktrees(repoPath),
+          },
+        ];
+        scannedDirs = [repoPath];
       }
 
       // Ensure all worktrees in discovered projects have metadata
@@ -291,66 +406,15 @@ export const listProjects = {
 
       const projectsWithWorktrees = projects.filter((p) => p.hasWorktrees);
 
-      let text: string;
-      if (ownerRepo) {
-        // We're in a worktree, show context-specific message
-        text = `🌳 Current Project Worktrees\n\n`;
-        text += `Running from worktree in: ${ownerRepo}\n\n`;
-      } else {
-        // Normal discovery mode
-        text = `📂 Discovered Projects (${projects.length} total)\n\n`;
-        text += `Scanned directories:\n`;
-        text += scannedDirs.map((dir) => `  • ${dir}`).join("\n") + "\n\n";
+      const headerSection = showAllRepos
+        ? buildAllReposHeader(projects, scannedDirs, worktreeManager)
+        : buildCurrentRepoHeader(ownerRepo || currentDir);
 
-        // Check if custom directories are being used
-        const configuredDirectories = worktreeManager.projectDirectories;
-        if (configuredDirectories && configuredDirectories.length > 0) {
-          text += `💡 PROJECT_DIRECTORIES has been set.\n\n`;
-        } else {
-          text += `💡 Set dirs with the PROJECT_DIRECTORIES env var\neg: \`export PROJECT_DIRECTORIES="$HOME/Projects:$HOME/Code"\`.\n\n`;
-        }
-      }
+      const worktreesSection = await buildWorktreesSection(
+        projectsWithWorktrees,
+      );
 
-      if (projectsWithWorktrees.length > 0) {
-        text += `Projects with worktrees (${projectsWithWorktrees.length}):\n`;
-        for (const project of projectsWithWorktrees) {
-          text += `  ✅ ${project.name}\n`;
-          text += `     • Path: ${project.path}\n`;
-
-          // Get and display worktrees for this project
-          try {
-            const worktrees = await WorktreeMetadataManager.listAllWorktrees(
-              project.path,
-            );
-            if (worktrees.length > 0) {
-              text += `     • Worktrees (${worktrees.length}):\n`;
-              for (const wt of worktrees) {
-                if (wt.metadata) {
-                  const labels = [];
-                  if (wt.worktreePath === process.cwd()) labels.push("current");
-                  const labelSuffix =
-                    labels.length > 0 ? ` (${labels.join(", ")})` : "";
-                  text += `       - ${wt.metadata.worktree.name}${labelSuffix} (${wt.metadata.worktree.branch})\n`;
-                } else {
-                  // Fallback for worktrees without metadata
-                  const pathParts = wt.worktreePath.split("/");
-                  const folderName = pathParts[pathParts.length - 1];
-                  const labels = [];
-                  if (wt.worktreePath === process.cwd()) labels.push("current");
-                  const labelSuffix =
-                    labels.length > 0 ? ` (${labels.join(", ")})` : "";
-                  text += `       - ${folderName}${labelSuffix} (no metadata)\n`;
-                }
-              }
-            }
-          } catch (error) {
-            text += `     • Error loading worktrees: ${error instanceof Error ? error.message : "Unknown error"}\n`;
-          }
-        }
-        text += "\n";
-      } else {
-        text += `No projects with worktrees found.\n`;
-      }
+      const text = `${headerSection}${worktreesSection}`;
 
       return {
         content: [{ type: "text", text }],

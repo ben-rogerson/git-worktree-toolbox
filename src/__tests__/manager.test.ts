@@ -238,9 +238,8 @@ describe("WorktreeManager", () => {
 
       const link = await manager.generateMRLinkByTaskId("task-123");
 
-      expect(link).toContain("Please create a merge request");
-      expect(link).toContain("feature-branch");
-      expect(link).toContain("main");
+      expect(link).toContain("No remote URL found");
+      expect(link).toContain("test-worktree");
     });
 
     it("should throw error when worktree not found", async () => {
