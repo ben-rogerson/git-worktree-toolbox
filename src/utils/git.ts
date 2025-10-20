@@ -182,6 +182,13 @@ export async function gitWorktreeList(
   return result.stdout;
 }
 
+export async function gitWorktreePrune(
+  options: GitCommandOptions = {},
+): Promise<void> {
+  const command = "git worktree prune -v";
+  await executeGitCommand(command, options);
+}
+
 export async function gitStatus(
   options: GitCommandOptions = {},
 ): Promise<string> {

@@ -24,7 +24,11 @@ import {
   writeFileWithDirectorySync,
   ensureWorktreesReadme,
 } from "@/src/utils/fs";
-import { gitWorktreeList, getDefaultBranch } from "@/src/utils/git";
+import {
+  gitWorktreeList,
+  gitWorktreePrune,
+  getDefaultBranch,
+} from "@/src/utils/git.js";
 import {
   WorktreeMetadata,
   ConversationEntry,
@@ -80,7 +84,7 @@ export class WorktreeMetadataManager {
     ensureWorktreesReadme(baseWorktreesPath);
 
     // Get remote URL from git and default branch
-    const { gitGetRemoteUrl } = await import("@/src/utils/git");
+    const { gitGetRemoteUrl } = await import("@/src/utils/git.js");
     const remoteUrl = await gitGetRemoteUrl("origin", {
       cwd: worktreePath,
     });
@@ -203,7 +207,7 @@ export class WorktreeMetadataManager {
       const defaultBranch = await getDefaultBranch({ cwd: worktreePath });
       let currentBranch = defaultBranch;
       try {
-        const { gitCurrentBranch } = await import("@/src/utils/git");
+        const { gitCurrentBranch } = await import("@/src/utils/git.js");
         currentBranch = await gitCurrentBranch({ cwd: worktreePath });
       } catch {
         // Default to default branch if we can't determine
@@ -460,6 +464,14 @@ export class WorktreeMetadataManager {
     try {
       // Get actual git worktrees using git command
       const options = gitRepoPath ? { cwd: gitRepoPath } : {};
+
+      // Prune stale worktrees first
+      try {
+        await gitWorktreePrune(options);
+      } catch (error) {
+        console.warn(`Failed to prune worktrees: ${error}`);
+      }
+
       const stdout = await gitWorktreeList(options);
       const lines = stdout.trim().split("\n");
 

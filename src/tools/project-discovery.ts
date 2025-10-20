@@ -240,13 +240,16 @@ Repository: ${repoPath}
 
 async function buildWorktreesSection(
   projectsWithWorktrees: DiscoveredProject[],
+  showArchived: boolean,
 ): Promise<string> {
   if (projectsWithWorktrees.length === 0) {
     return `No projects with worktrees found.\n`;
   }
 
   const projectSections = await Promise.all(
-    projectsWithWorktrees.map((project) => buildProjectSection(project)),
+    projectsWithWorktrees.map((project) =>
+      buildProjectSection(project, showArchived),
+    ),
   );
 
   return `Projects with worktrees (${projectsWithWorktrees.length}):
@@ -256,28 +259,38 @@ ${projectSections.join("")}
 
 async function buildProjectSection(
   project: DiscoveredProject,
+  showArchived: boolean,
 ): Promise<string> {
-  const worktreesList = await buildWorktreesList(project.path);
+  const worktreesList = await buildWorktreesList(project.path, showArchived);
 
   return `  ✅ ${project.name}
      • Path: ${project.path}
 ${worktreesList}`;
 }
 
-async function buildWorktreesList(projectPath: string): Promise<string> {
+async function buildWorktreesList(
+  projectPath: string,
+  showArchived: boolean,
+): Promise<string> {
   try {
-    const worktrees =
+    const allWorktrees =
       await WorktreeMetadataManager.listAllWorktrees(projectPath);
 
-    if (worktrees.length === 0) {
+    const filteredWorktrees = showArchived
+      ? allWorktrees
+      : allWorktrees.filter(
+          (wt) => wt.metadata?.worktree?.status !== "archived",
+        );
+
+    if (filteredWorktrees.length === 0) {
       return "";
     }
 
     const worktreeEntries = await Promise.all(
-      worktrees.map((wt) => buildWorktreeEntry(wt, projectPath)),
+      filteredWorktrees.map((wt) => buildWorktreeEntry(wt, projectPath)),
     );
 
-    return `     • Worktrees (${worktrees.length}):
+    return `     • Worktrees (${filteredWorktrees.length}):
 ${worktreeEntries.join("")}`;
   } catch (error) {
     const errorMessage =
@@ -299,6 +312,10 @@ async function buildWorktreeEntry(
   }
 
   if (wt.metadata) {
+    if (wt.metadata.worktree.status === "archived") {
+      labels.push("archived");
+    }
+
     const branch = wt.metadata.worktree.branch;
     const hasRemote = await gitBranchHasRemote(branch, { cwd: projectPath });
     if (!hasRemote) {
@@ -429,6 +446,7 @@ export const listProjects = {
 
       const worktreesSection = await buildWorktreesSection(
         projectsWithWorktrees,
+        !!all,
       );
 
       const text = `${headerSection}${worktreesSection}`;

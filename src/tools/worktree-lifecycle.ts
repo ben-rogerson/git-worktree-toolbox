@@ -13,6 +13,7 @@ import type { WorktreeManager } from "@/src/worktree/manager";
 import {
   gitHasPendingChanges,
   gitWorktreeRemove,
+  gitWorktreePrune,
   gitDeleteBranch,
   gitCurrentBranch,
   detectWorktreeOwnerRepo,
@@ -189,6 +190,13 @@ export const archiveWorktree = {
 
     const id = worktree_identifier.trim();
     try {
+      // Prune stale worktrees first
+      try {
+        await gitWorktreePrune();
+      } catch (error) {
+        console.warn(`Failed to prune worktrees: ${error}`);
+      }
+
       const worktree = await worktreeManager.getWorktreeByPathOrTaskId(id);
 
       if (!worktree) {
@@ -260,14 +268,18 @@ export const archiveWorktree = {
           const details = [
             "- No metadata was present (worktree archived as-is)",
           ];
+          let statusEmoji = "✅";
+          let statusMessage = "Successfully archived worktree";
 
           if (removalBlocked) {
-            details.push(`- Worktree preserved (${blockReason})`);
+            statusEmoji = "⚠️";
+            statusMessage = "Archived worktree (directory preserved)";
+            details.push(`- ⚠️  Worktree directory preserved (${blockReason})`);
             details.push("- Branch preserved");
           } else {
             details.push(
               worktreeRemoved
-                ? "- Worktree removed"
+                ? "- Worktree directory removed"
                 : "- Worktree preserved (removal failed)",
             );
             if (has_branch_removal) {
@@ -283,13 +295,18 @@ export const archiveWorktree = {
 
           details.push(`- Path: ${id}`);
 
+          if (removalBlocked) {
+            details.push(
+              `\n💡 Tip: Commit or discard changes, then run archive again to fully remove the worktree`,
+            );
+          }
+
           return {
             content: [
               {
                 type: "text",
                 text:
-                  `✅ Successfully archived worktree "${worktreeName}"\n\n` +
-                  `Worktree has been safely archived.\n\n` +
+                  `${statusEmoji} ${statusMessage} "${worktreeName}"\n\n` +
                   `Details:\n${details.join("\n")}`,
               },
             ],
@@ -373,14 +390,18 @@ export const archiveWorktree = {
       }
 
       const details = ['- Worktree metadata updated to "archived" status'];
+      let statusEmoji = "✅";
+      let statusMessage = "Successfully archived worktree";
 
       if (removalBlocked) {
-        details.push(`- Worktree preserved (${blockReason})`);
+        statusEmoji = "⚠️";
+        statusMessage = "Archived worktree metadata (worktree preserved)";
+        details.push(`- ⚠️  Worktree directory preserved (${blockReason})`);
         details.push("- Branch preserved");
       } else {
         details.push(
           worktreeRemoved
-            ? "- Worktree removed"
+            ? "- Worktree directory removed"
             : "- Worktree preserved (removal failed)",
         );
         if (has_branch_removal) {
@@ -396,13 +417,18 @@ export const archiveWorktree = {
 
       details.push(`- Path: ${worktree.worktreePath}`);
 
+      if (removalBlocked) {
+        details.push(
+          `\n💡 Tip: Commit or discard changes, then run archive again to fully remove the worktree`,
+        );
+      }
+
       return {
         content: [
           {
             type: "text",
             text:
-              `✅ Successfully archived worktree "${worktree.metadata.worktree.name}" (${worktree.metadata.worktree.id})\n\n` +
-              `Worktree has been safely archived and the worktree status updated.\n\n` +
+              `${statusEmoji} ${statusMessage} "${worktree.metadata.worktree.name}" (${worktree.metadata.worktree.id})\n\n` +
               `Details:\n${details.join("\n")}`,
           },
         ],
@@ -653,9 +679,27 @@ export const cleanWorktrees = {
           const name =
             ws.metadata?.worktree?.name || path.basename(ws.worktreePath);
           try {
+            // Update metadata to archived status
             await worktreeManager.archiveWorktreeByPathOrTaskId(
               ws.worktreePath,
             );
+
+            // Remove the worktree directory
+            try {
+              await gitWorktreeRemove(ws.worktreePath);
+            } catch (error) {
+              console.warn(`Failed to remove worktree via git: ${error}`);
+              // Fallback to manual directory removal
+              if (fs.existsSync(ws.worktreePath)) {
+                fs.rmSync(ws.worktreePath, { recursive: true, force: true });
+              }
+            }
+
+            // Delete metadata file
+            if (ws.metadata) {
+              WorktreeMetadataManager.deleteMetadata(ws.worktreePath);
+            }
+
             archiveResults.push({ name, success: true });
           } catch (error) {
             archiveResults.push({
