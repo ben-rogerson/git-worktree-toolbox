@@ -13,6 +13,9 @@ import {
   gitDiffFileList,
   detectWorktreeOwnerRepo,
   getDefaultBranch,
+  gitAdd,
+  gitCommit,
+  gitPush,
 } from "@/src/utils/git";
 import { sharedParameters } from "./utils";
 
@@ -202,6 +205,18 @@ export const worktreeChanges = {
           for (const wt of worktreesToPush) {
             if (!("error" in wt)) {
               try {
+                const gitOptions = { cwd: wt.path };
+                
+                // Add all changes
+                await gitAdd(".", gitOptions);
+                
+                // Commit with a descriptive message
+                const commitMessage = `Auto-commit: ${wt.name} changes`;
+                await gitCommit(commitMessage, gitOptions);
+                
+                // Push to remote
+                await gitPush("origin", undefined, gitOptions);
+                
                 pushedWorktrees.push(wt.name);
               } catch (error) {
                 console.warn(
