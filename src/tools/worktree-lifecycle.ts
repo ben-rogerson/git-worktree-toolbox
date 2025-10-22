@@ -61,7 +61,7 @@ export const createTaskWorktree = {
     ],
   },
   cliFooter:
-    "💡 Run `gwtree go <task_id>` to open the worktree in your editor\n💡 Run `gwtree changes` to see all worktrees and their changes\n💡 Use `--yolo` flag to enable Claude yolo mode (dangerously-skip-permissions)",
+    "💡 Try asking the MCP: 'New worktree for fixing the login bug' or 'Set up a new workspace for the user dashboard feature'\n💡 Run `gwtree go <task_id>` to open the worktree in your editor\n💡 Run `gwtree changes` to see all worktrees and their changes\n💡 Use `--yolo` flag to enable Claude yolo mode (dangerously-skip-permissions)",
   mcpFooter:
     '💡 Use the "go" tool with the task ID to open the worktree in your editor\n💡 Use the "changes" tool to see all worktrees and their current status\n💡 Set "yolo: true" to enable Claude yolo mode (dangerously-skip-permissions)',
   parameters: (z) => ({
@@ -171,7 +171,7 @@ export const archiveWorktree = {
     ],
   },
   cliFooter:
-    "💡 Run `gwtree archive <identifier> -r` to remove the branch as well\n💡 Run `gwtree list` to see all available worktrees",
+    "💡 Try asking the MCP: 'Archive this worktree' or 'Clean up the completed feature worktree'\n💡 Run `gwtree archive <identifier> -r` to remove the branch as well\n💡 Run `gwtree list` to see all available worktrees",
   mcpFooter:
     '💡 Set "has_branch_removal: true" to remove the branch as well\n💡 Use the "list" tool to see all available worktrees',
   parameters: (z) => ({
@@ -490,6 +490,10 @@ export const cleanWorktrees = {
       },
     ],
   },
+  cliFooter:
+    "💡 Try asking the MCP: 'Clean unused worktrees' or 'Archive old worktrees'\n💡 Run `gwtree clean -d` to preview what would be archived (dry run)\n💡 Run `gwtree list` to see all available worktrees",
+  mcpFooter:
+    '💡 Set "dry_run: true" to preview what would be archived without actually archiving\n💡 Use the "list" tool to see all available worktrees',
   parameters: (z) => ({
     git_repo_path: sharedParameters.git_repo_path_optional(z),
     dry_run: z
@@ -785,7 +789,7 @@ export const launchWorktree = {
     ],
   },
   cliFooter:
-    "💡 Run `gwtree go <identifier> -e code` to open in VS Code instead\n💡 Run `gwtree list` to see all available worktrees",
+    "💡 Try asking the MCP: 'Open the login bug worktree in my editor' or 'Switch to the dashboard worktree'\n💡 Run `gwtree go <identifier> -e code` to open in VS Code instead\n💡 Run `gwtree list` to see all available worktrees",
   mcpFooter:
     '💡 Set "editor" parameter to "code" or "cursor" to choose your editor\n💡 Use the "list" tool to see all available worktrees',
   parameters: (z) => ({
@@ -937,6 +941,10 @@ export const doctorWorktrees = {
       },
     ],
   },
+  cliFooter:
+    "💡 Try asking the MCP: 'Fix my worktree metadata' or 'Repair worktree configuration'\n💡 Run `gwtree doctor` to check and fix all worktree metadata\n💡 Run `gwtree list` to see all available worktrees",
+  mcpFooter:
+    '💡 Use the "list" tool to see all available worktrees after running doctor',
   parameters: (z) => ({
     git_repo_path: sharedParameters.git_repo_path_optional(z),
   }),

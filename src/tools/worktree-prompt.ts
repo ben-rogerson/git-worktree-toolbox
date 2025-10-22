@@ -46,7 +46,7 @@ export const worktreePrompt = {
     ],
   },
   cliFooter:
-    '💡 Run `gwtree prompt --setup` to initialize global Claude config\n💡 Run `gwtree prompt <identifier>` to resume a Claude session\n💡 Run `gwtree prompt <identifier> -m "prompt"` to resume with a specific prompt',
+    "💡 Try asking the MCP: 'Resume Claude session for task-245' or 'Setup Claude auto-prompt'\n💡 Run `gwtree prompt --setup` to initialize global Claude config\n💡 Run `gwtree prompt <identifier>` to resume a Claude session\n💡 Run `gwtree prompt <identifier> -m \"prompt\"` to resume with a specific prompt",
   mcpFooter:
     '💡 Set "setup: true" to initialize global Claude config\n💡 Provide worktree_identifier to resume a Claude session\n💡 Add optional "prompt" parameter to send a message when resuming',
   parameters: (z) => ({

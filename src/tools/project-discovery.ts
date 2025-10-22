@@ -11,10 +11,7 @@ import type { WorktreeManager } from "@/src/worktree/manager";
 import { WorktreeMetadataManager } from "@/src/worktree/metadata";
 import type { WorktreeMetadata } from "@/src/worktree/types";
 import { ensureWorktreeHasMetadata } from "./worktree-lifecycle";
-import {
-  detectWorktreeOwnerRepo,
-  gitBranchHasRemote,
-} from "@/src/utils/git";
+import { detectWorktreeOwnerRepo, gitBranchHasRemote } from "@/src/utils/git";
 import { sharedParameters } from "./utils";
 
 // ============================================================================
@@ -348,7 +345,7 @@ export const listProjects = {
     ],
   },
   cliFooter:
-    "💡 Run `gwtree changes <identifier>` to see changes in a worktree\n💡 Run `gwtree create <description>` to create a new worktree",
+    "💡 Try asking the MCP: 'Show me all my projects and worktrees' or 'What worktrees do I have?'\n💡 Run `gwtree changes <identifier>` to see changes in a worktree\n💡 Run `gwtree create <description>` to create a new worktree",
   mcpFooter:
     '💡 Use the "changes" tool with a worktree identifier to see detailed changes\n💡 Use the "create" tool to create a new worktree for a task',
   parameters: (z) => ({
@@ -481,7 +478,7 @@ export const generateMrLink = {
     ],
   },
   cliFooter:
-    "💡 Run `gwtree changes <identifier>` to see what changes will be in the MR\n💡 Run `gwtree list` to see all available worktrees",
+    "💡 Try asking the MCP: 'Generate a pull request link' or 'Create a merge request for task-245'\n💡 Run `gwtree changes <identifier>` to see what changes will be in the MR\n💡 Run `gwtree list` to see all available worktrees",
   mcpFooter:
     '💡 Use the "changes" tool to see what changes will be in the merge request\n💡 Use the "list" tool to see all available worktrees',
   parameters: (z) => ({

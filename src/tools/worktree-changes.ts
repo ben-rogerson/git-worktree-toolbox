@@ -39,7 +39,7 @@ export const worktreeChanges = {
     ],
   },
   cliFooter:
-    "💡 Run `gwtree changes <identifier>` to see detailed changes for a specific worktree\n💡 Run `gwtree changes -p` to commit and push all pending changes",
+    "💡 Try asking the MCP: 'Show changes from task-245' or 'What files have I modified?'\n💡 Run `gwtree changes <identifier>` to see detailed changes for a specific worktree\n💡 Run `gwtree changes -p` to commit and push all pending changes",
   mcpFooter:
     '💡 Use "worktree_identifier" parameter to see detailed changes for a specific worktree\n💡 Set "push_changes: true" to commit and push all pending changes',
   parameters: (z) => ({
@@ -502,7 +502,7 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
     ],
   },
   cliFooter:
-    "💡 Run `gwtree grab <identifier>` first to preview changes (dry run)\n💡 Run `gwtree grab <identifier> -f` to actually copy the files",
+    "💡 Try asking Claude: 'Get login bug worktree changes' or 'Merge updates from the dashboard branch'\n💡 Run `gwtree grab <identifier>` first to preview changes (dry run)\n💡 Run `gwtree grab <identifier> -f` to actually copy the files",
   mcpFooter:
     '💡 Omit "avoid_dry_run" parameter first to preview changes (dry run)\n💡 Set "avoid_dry_run: true" to actually copy the files from the worktree',
   parameters: (z) => ({
