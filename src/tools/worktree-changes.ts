@@ -79,9 +79,7 @@ export const worktreeChanges = {
         }
 
         // Auto-initialize metadata for worktrees that don't have it
-        const worktreesWithoutMetadata = worktrees.filter(
-          (wt) => !wt.metadata,
-        );
+        const worktreesWithoutMetadata = worktrees.filter((wt) => !wt.metadata);
         if (worktreesWithoutMetadata.length > 0) {
           const { ensureWorktreeHasMetadata } = await import(
             "./worktree-lifecycle"
@@ -156,9 +154,13 @@ export const worktreeChanges = {
               });
             } catch {
               try {
-                diffStats = await gitDiffStats(`origin/${defaultBranch}`, "HEAD", {
-                  cwd: targetWorktreePath,
-                });
+                diffStats = await gitDiffStats(
+                  `origin/${defaultBranch}`,
+                  "HEAD",
+                  {
+                    cwd: targetWorktreePath,
+                  },
+                );
               } catch {
                 // No diff stats available
               }
@@ -206,17 +208,17 @@ export const worktreeChanges = {
             if (!("error" in wt)) {
               try {
                 const gitOptions = { cwd: wt.path };
-                
+
                 // Add all changes
                 await gitAdd(".", gitOptions);
-                
+
                 // Commit with a descriptive message
                 const commitMessage = `Auto-commit: ${wt.name} changes`;
                 await gitCommit(commitMessage, gitOptions);
-                
+
                 // Push to remote
                 await gitPush("origin", undefined, gitOptions);
-                
+
                 pushedWorktrees.push(wt.name);
               } catch (error) {
                 console.warn(
