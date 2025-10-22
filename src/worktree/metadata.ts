@@ -69,7 +69,7 @@ export class WorktreeMetadataManager {
 
   static async createMetadata(
     worktreePath: string,
-    options: Omit<CreateWorktreeOptions, "channel_id"> & {
+    options: Omit<CreateWorktreeOptions, "channel_id" | "yolo"> & {
       worktree_name: string;
       branch: string;
     },

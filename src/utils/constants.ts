@@ -23,13 +23,12 @@ export function getGlobalConfig(): GlobalConfig {
   const homeDir = os.homedir();
 
   // Default base worktrees path: ~/.gwtree/worktrees
-  const baseWorktreesPath = process.env.BASE_WORKTREES_PATH ||
-    path.join(homeDir, ".gwtree", "worktrees");
+  const baseWorktreesPath =
+    process.env.BASE_WORKTREES_PATH || path.join(homeDir, ".gwtree");
 
   // Custom project directories (colon-separated)
-  const projectDirectories = process.env.PROJECT_DIRECTORIES
-    ?.split(":")
-    .filter(Boolean);
+  const projectDirectories =
+    process.env.PROJECT_DIRECTORIES?.split(":").filter(Boolean);
 
   return {
     baseWorktreesPath,

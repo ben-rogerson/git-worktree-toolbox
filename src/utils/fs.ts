@@ -137,20 +137,16 @@ export function ensureWorktreesReadme(worktreesDir: string): void {
     return;
   }
 
-  const content = `# Git Worktree Toolbox - Worktrees Directory
+  const content = `# Git Worktree Toolbox - Metadata Directory
 
-This directory houses **git worktrees** created by [git-worktree-toolbox](https://github.com/ben-rogerson/git-worktree-toolbox).
-
-## What are Git Worktrees?
-
-Git worktrees let you work on multiple branches simultaneously without switching contexts or stashing changes. Each worktree is a separate working directory linked to the same repository.
+This directory houses **metadata** created by [git-worktree-toolbox](https://github.com/ben-rogerson/git-worktree-toolbox).
 
 ## What's This Folder For?
 
-When you create a worktree using \`gwtree\`, it gets organized here by project and task:
+When you create a worktree using \`gwtree\`, it gets organized here by task:
 
 \`\`\`
-~/.gwtree/worktrees/
+~/.gwtree/
 └── my-project/
     ├── feature-auth/
     ├── bugfix-login/
@@ -183,7 +179,7 @@ gwtree remove my-feature
 
 ---
 
-*This file was automatically generated. Safe to delete - it'll regenerate on next worktree creation.*
+*This file was automatically generated. Safe to delete - it'll regenerate on next worktree creation or when your run the doctor tool.*
 `;
 
   try {

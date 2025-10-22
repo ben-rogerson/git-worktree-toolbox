@@ -31,6 +31,9 @@ import {
 // Project Discovery Tools
 import { listProjects, generateMrLink } from "./project-discovery.js";
 
+// Worktree Prompt Tool
+import { worktreePrompt } from "./worktree-prompt.js";
+
 export interface WorktreeMcpToolsConfig {
   base_worktrees_path?: string;
   project_directories?: string[];
@@ -49,6 +52,8 @@ export const tools = [
   // Integration
   generateMrLink,
   mergeRemoteWorktreeChangesIntoLocal,
+  // Claude Prompt Plugin
+  worktreePrompt,
 ] satisfies McpTool[];
 
 export function register(server: Server, config: WorktreeMcpToolsConfig) {

@@ -124,6 +124,11 @@ function showToolHelp(tool: McpTool): void {
     console.log("No flags available for this tool.");
   }
 
+  // Show CLI footer if available
+  if (tool.cliFooter) {
+    console.log(`\n${tool.cliFooter}`);
+  }
+
   console.log("");
 }
 
@@ -186,7 +191,9 @@ async function main() {
     case "help": {
       const TOOL_ALIASES = buildToolAliases(worktreeTools.tools);
       console.log(`🌳 Git Worktree Toolbox ${packageJson.version} CLI\n`);
-      console.log("Git worktree toolbox for managing isolated development environments.\n");
+      console.log(
+        "Git worktree toolbox for managing isolated development environments.\n",
+      );
       console.log("Usage:");
       console.log(
         "  gwtree                          Start MCP server on stdio",

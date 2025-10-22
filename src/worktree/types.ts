@@ -43,11 +43,20 @@ export interface GitInfo {
   remote_url?: string;
 }
 
+export interface ClaudeSessionConfig {
+  enabled: boolean;
+  session_id: string;
+  created_at: string;
+  last_resumed_at?: string;
+  prompt_template?: string;
+}
+
 export interface WorktreeMetadata {
   worktree: WorktreeInfo;
   team: TeamInfo;
   conversation_history: ConversationEntry[];
   git_info: GitInfo;
+  claude_session?: ClaudeSessionConfig;
 }
 
 export interface CreateWorktreeOptions {
@@ -55,6 +64,7 @@ export interface CreateWorktreeOptions {
   base_branch?: string;
   auto_invite_users?: string[];
   git_repo_path?: string;
+  yolo: boolean;
 }
 
 export interface WorktreeCreationResult {

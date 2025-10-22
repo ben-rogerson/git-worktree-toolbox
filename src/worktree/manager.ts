@@ -69,6 +69,17 @@ export class WorktreeManager {
         response: `Created worktree "${worktreeName}"`,
       });
 
+      // Step 4: Execute Claude prompt plugin if enabled
+      const { executeClaudePromptForWorktree } = await import(
+        "@/src/plugins/claude-prompt/index.js"
+      );
+      await executeClaudePromptForWorktree(
+        worktree.path,
+        metadata,
+        options.task_description,
+        options.yolo,
+      );
+
       return {
         task_id: metadata.worktree.id,
         worktree_name: worktreeName,

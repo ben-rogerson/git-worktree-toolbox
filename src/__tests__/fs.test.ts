@@ -61,19 +61,11 @@ describe("ensureWorktreesReadme", () => {
     expect(content).toContain("gwtree remove");
   });
 
-  it("should explain what worktrees are", () => {
-    ensureWorktreesReadme(testDir);
-
-    const content = fs.readFileSync(readmePath, "utf8");
-    expect(content).toContain("What are Git Worktrees");
-    expect(content).toContain("multiple branches");
-  });
-
   it("should include directory structure example", () => {
     ensureWorktreesReadme(testDir);
 
     const content = fs.readFileSync(readmePath, "utf8");
-    expect(content).toContain("~/.gwtree/worktrees/");
+    expect(content).toContain("~/.gwtree/");
     expect(content).toContain("my-project");
   });
 });

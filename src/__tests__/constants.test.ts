@@ -25,9 +25,7 @@ describe("getGlobalConfig", () => {
   it("should return default baseWorktreesPath when no env var is set", () => {
     const config = getGlobalConfig();
 
-    expect(config.baseWorktreesPath).toBe(
-      path.join(homeDir, ".gwtree", "worktrees"),
-    );
+    expect(config.baseWorktreesPath).toBe(path.join(homeDir, ".gwtree"));
   });
 
   it("should return custom baseWorktreesPath from env var", () => {
