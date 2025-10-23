@@ -84,7 +84,7 @@ export const worktreeChanges = {
         );
         if (worktreesWithoutMetadata.length > 0) {
           const { ensureWorktreeHasMetadata } = await import(
-            "./worktree-lifecycle"
+            "./worktree-lifecycle.js"
           );
           await WorktreeMetadataManager.ensureMetadataForWorktrees(
             worktreesWithoutMetadata.map((wt) => wt.worktreePath),

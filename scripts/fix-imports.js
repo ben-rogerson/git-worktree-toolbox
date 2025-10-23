@@ -17,6 +17,16 @@ files.forEach((file) => {
     'from "$1.js"'
   );
 
+  // Add .js to dynamic imports without extensions
+  content = content.replace(
+    /import\(['"](\.\.[\/\\][^'"]+?)(?<!\.js)['"]\)/g,
+    'import("$1.js")'
+  );
+  content = content.replace(
+    /import\(['"](\.[\/\\][^'"]+?)(?<!\.js)['"]\)/g,
+    'import("$1.js")'
+  );
+
   writeFileSync(file, content);
 });
 
