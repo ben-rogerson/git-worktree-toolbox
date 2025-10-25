@@ -39,9 +39,14 @@ function generateBaseName(taskDescription: string, maxLength: number): string {
 
   const baseName = words.join("-") || "task";
 
-  // Truncate to maxLength if needed
+  // Truncate to maxLength if needed, but avoid trailing hyphens
   if (baseName.length > maxLength) {
-    return baseName.substring(0, maxLength);
+    let truncated = baseName.substring(0, maxLength);
+    // Remove trailing hyphen if present
+    if (truncated.endsWith("-")) {
+      truncated = truncated.slice(0, -1);
+    }
+    return truncated;
   }
 
   return baseName;

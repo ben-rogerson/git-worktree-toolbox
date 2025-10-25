@@ -13,8 +13,12 @@ import {
   ExecuteClaudePromptOptions,
   ResumeClaudeSessionOptions,
 } from "./types";
-import { renderTemplate, TemplateVariables } from "./templates";
-import { loadGlobalClaudeConfig } from "./config";
+import { renderTemplate } from "@/src/plugins/shared/templates";
+import type { TemplateVariables } from "@/src/plugins/shared/types";
+import {
+  loadGlobalAIAgentConfig,
+  updateLastUsedProvider,
+} from "@/src/plugins/shared/config";
 
 export async function executeClaudePrompt(
   options: ExecuteClaudePromptOptions,
@@ -31,17 +35,11 @@ export async function executeClaudePrompt(
       return;
     }
 
-    // Build command args
-    const args = ["-p", prompt, "--session-id", sessionId];
+    // Build command args - start interactive session with initial prompt
+    const args = [prompt, "--session-id", sessionId];
     if (permissionMode) {
       args.push("--dangerously-skip-permissions");
     }
-
-    console.log("args", args);
-    console.log("permissionMode", permissionMode);
-    console.log("prompt", prompt);
-    console.log("sessionId", sessionId);
-    console.log("worktreePath", worktreePath);
 
     // Provide feedback before spawning
     console.log("\n🚀 Launching Claude CLI...");
@@ -49,22 +47,34 @@ export async function executeClaudePrompt(
     // Small delay to ensure the message is visible
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Spawn Claude CLI in the worktree directory
+    console.log(
+      `\n✨ Claude CLI launched with session ID: ${sessionId}\n` +
+        `   Resume later with: gwtree prompt <worktree-identifier>\n`,
+    );
+
+    // Spawn Claude CLI with inherited stdio for interactive session
     const claudeProcess = spawn("claude", args, {
       cwd: worktreePath,
+      env: { ...process.env },
       stdio: "inherit",
-      detached: false,
+      detached: true,
     });
 
-    claudeProcess.on("error", (error) => {
-      console.warn(`Failed to launch Claude CLI: ${error.message}`);
-    });
+    // Wait for Claude process to exit
+    await new Promise<void>((resolve, reject) => {
+      claudeProcess.on("error", (error) => {
+        console.warn(`Failed to launch Claude CLI: ${error.message}`);
+        reject(error);
+      });
 
-    claudeProcess.on("spawn", () => {
-      console.log(
-        `\n✨ Claude CLI launched with session ID: ${sessionId}\n` +
-          `   Resume later with: gwtree prompt <worktree-identifier>\n`,
-      );
+      claudeProcess.on("exit", (code) => {
+        if (code === 0) {
+          console.log("\n✅ Claude CLI session ended successfully");
+        } else {
+          console.log(`\n⚠️  Claude CLI exited with code: ${code}`);
+        }
+        resolve();
+      });
     });
   } catch (error) {
     console.warn(`Failed to execute Claude prompt: ${error}`);
@@ -85,20 +95,15 @@ export async function resumeClaudeSession(
       );
     }
 
-    // Build command args
-    const args = ["--resume", sessionId];
+    // Build command args - prompt must come before --resume flag
+    const args = [];
     if (prompt) {
       args.push(prompt);
     }
+    args.push("--resume", sessionId);
     if (permissionMode) {
       args.push("--dangerously-skip-permissions");
     }
-
-    // console.log("args", args);
-    // console.log("permissionMode", permissionMode);
-    // console.log("prompt", prompt);
-    // console.log("sessionId", sessionId);
-    // console.log("worktreePath", worktreePath);
 
     // Provide feedback before spawning
     console.log("\n🔄 Resuming Claude session...");
@@ -106,26 +111,63 @@ export async function resumeClaudeSession(
     // Small delay to ensure the message is visible
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Spawn Claude CLI in the worktree directory
+    // Update last_resumed_at timestamp
+    const metadata = await WorktreeMetadataManager.loadMetadata(worktreePath);
+    if (metadata?.claude_session) {
+      metadata.claude_session.last_resumed_at = new Date().toISOString();
+      await WorktreeMetadataManager.saveMetadata(worktreePath, metadata);
+    }
+
+    console.log(`\n✨ Resumed Claude session: ${sessionId}\n`);
+
+    // Spawn Claude CLI with inherited stdio for interactive session
     const claudeProcess = spawn("claude", args, {
       cwd: worktreePath,
-      stdio: "inherit",
-      detached: false,
+      env: { ...process.env },
+      stdio: ["inherit", "inherit", "pipe"],
+      detached: true,
     });
 
-    claudeProcess.on("error", (error) => {
-      throw new Error(`Failed to launch Claude CLI: ${error.message}`);
-    });
+    let stderrOutput = "";
 
-    claudeProcess.on("spawn", async () => {
-      // Update last_resumed_at timestamp
-      const metadata = await WorktreeMetadataManager.loadMetadata(worktreePath);
-      if (metadata?.claude_session) {
-        metadata.claude_session.last_resumed_at = new Date().toISOString();
-        await WorktreeMetadataManager.saveMetadata(worktreePath, metadata);
-      }
+    if (claudeProcess.stderr) {
+      claudeProcess.stderr.on("data", (data) => {
+        const text = data.toString();
+        stderrOutput += text;
+        process.stderr.write(data);
+      });
+    }
 
-      console.log(`\n✨ Resumed Claude session: ${sessionId}\n`);
+    // Wait for Claude process to exit
+    await new Promise<void>((resolve, reject) => {
+      claudeProcess.on("error", (error) => {
+        reject(new Error(`Failed to launch Claude CLI: ${error.message}`));
+      });
+
+      claudeProcess.on("exit", async (code) => {
+        if (code === 0) {
+          console.log("\n✅ Claude CLI session ended successfully");
+          resolve();
+        } else if (
+          code === 1 &&
+          stderrOutput.includes("No conversation found with session ID")
+        ) {
+          console.log(
+            "\n⚠️  Session not found. Starting new session instead...\n",
+          );
+
+          await executeClaudePrompt({
+            worktreePath,
+            sessionId,
+            prompt: prompt || "",
+            permissionMode,
+          });
+          resolve();
+        } else {
+          console.log(`\n⚠️  Claude CLI exited with code: ${code}`);
+          resolve();
+        }
+      });
     });
   } catch (error) {
     throw new Error(
@@ -140,9 +182,9 @@ export async function executeClaudePromptForWorktree(
   taskDescription: string,
   permissionMode: boolean,
 ): Promise<void> {
-  const globalConfig = await loadGlobalClaudeConfig();
+  const globalConfig = await loadGlobalAIAgentConfig();
 
-  if (!globalConfig?.enabled) {
+  if (!globalConfig?.enabled || globalConfig.provider !== "claude") {
     return;
   }
 
@@ -159,7 +201,6 @@ export async function executeClaudePromptForWorktree(
 
   const prompt = renderTemplate(template, variables);
 
-  // Save Claude session to metadata
   metadata.claude_session = {
     enabled: true,
     session_id: sessionId,
@@ -168,8 +209,8 @@ export async function executeClaudePromptForWorktree(
   };
 
   await WorktreeMetadataManager.saveMetadata(worktreePath, metadata);
+  await updateLastUsedProvider("claude");
 
-  // Execute Claude prompt
   await executeClaudePrompt({
     worktreePath,
     sessionId,

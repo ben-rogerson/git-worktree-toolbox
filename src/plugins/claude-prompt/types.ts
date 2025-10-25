@@ -17,6 +17,7 @@ export interface GlobalClaudeConfig {
   enabled: boolean;
   prompt_template?: string;
   permission_mode: boolean;
+  execution_mode?: boolean;
 }
 
 export interface ExecuteClaudePromptOptions {

@@ -51,12 +51,21 @@ export interface ClaudeSessionConfig {
   prompt_template?: string;
 }
 
+export interface CursorSessionConfig {
+  enabled: boolean;
+  chat_id: string;
+  created_at: string;
+  last_resumed_at?: string;
+  prompt_template?: string;
+}
+
 export interface WorktreeMetadata {
   worktree: WorktreeInfo;
   team: TeamInfo;
   conversation_history: ConversationEntry[];
   git_info: GitInfo;
   claude_session?: ClaudeSessionConfig;
+  cursor_session?: CursorSessionConfig;
 }
 
 export interface CreateWorktreeOptions {

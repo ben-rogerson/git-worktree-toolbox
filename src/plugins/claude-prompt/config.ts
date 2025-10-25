@@ -5,40 +5,67 @@
  * Global config is stored at ~/.gwtree/claude-prompt.yaml
  */
 
+/**
+ * Claude Prompt Plugin Configuration
+ *
+ * Manages legacy claude-prompt.yaml config and migrates to unified ai-agent.yaml
+ */
+
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import * as yaml from "js-yaml";
 import { GlobalClaudeConfig } from "./types";
 import { DEFAULT_PROMPT_TEMPLATE } from "./templates";
+import {
+  loadGlobalAIAgentConfig,
+  saveGlobalAIAgentConfig,
+} from "@/src/plugins/shared/config";
+import type { GlobalAIAgentConfig } from "@/src/plugins/shared/types";
 
-const GLOBAL_CONFIG_PATH = path.join(
+const LEGACY_CONFIG_PATH = path.join(
   os.homedir(),
   ".gwtree",
   "claude-prompt.yaml",
 );
 
 export async function loadGlobalClaudeConfig(): Promise<GlobalClaudeConfig | null> {
-  if (!fs.existsSync(GLOBAL_CONFIG_PATH)) {
+  const aiConfig = await loadGlobalAIAgentConfig();
+  if (aiConfig) {
+    return {
+      enabled: aiConfig.enabled && aiConfig.provider === "claude",
+      prompt_template: aiConfig.prompt_template,
+      permission_mode: aiConfig.permission_mode,
+    };
+  }
+
+  if (!fs.existsSync(LEGACY_CONFIG_PATH)) {
     return null;
   }
 
   try {
-    const yamlContent = fs.readFileSync(GLOBAL_CONFIG_PATH, "utf8");
-    const config = yaml.load(yamlContent) as any;
+    const yamlContent = fs.readFileSync(LEGACY_CONFIG_PATH, "utf8");
+    const config = yaml.load(yamlContent) as GlobalClaudeConfig;
 
-    // Handle migration from execution_mode to permission_mode
     if (
       config.execution_mode !== undefined &&
       config.permission_mode === undefined
     ) {
       config.permission_mode = config.execution_mode;
       delete config.execution_mode;
-      // Save the migrated config
-      await saveGlobalClaudeConfig(config);
     }
 
-    return config as GlobalClaudeConfig;
+    const migratedConfig: GlobalAIAgentConfig = {
+      enabled: config.enabled,
+      provider: "claude",
+      prompt_template: config.prompt_template,
+      permission_mode: config.permission_mode,
+    };
+
+    await saveGlobalAIAgentConfig(migratedConfig);
+    fs.unlinkSync(LEGACY_CONFIG_PATH);
+
+    return config;
   } catch (error) {
     console.warn(`Failed to load global Claude config: ${error}`);
     return null;
@@ -48,22 +75,14 @@ export async function loadGlobalClaudeConfig(): Promise<GlobalClaudeConfig | nul
 export async function saveGlobalClaudeConfig(
   config: GlobalClaudeConfig,
 ): Promise<void> {
-  try {
-    const configDir = path.dirname(GLOBAL_CONFIG_PATH);
-    if (!fs.existsSync(configDir)) {
-      fs.mkdirSync(configDir, { recursive: true });
-    }
+  const aiConfig: GlobalAIAgentConfig = {
+    enabled: config.enabled,
+    provider: "claude",
+    prompt_template: config.prompt_template,
+    permission_mode: config.permission_mode,
+  };
 
-    const yamlContent = yaml.dump(config, {
-      indent: 2,
-      lineWidth: 120,
-      quotingType: '"',
-    });
-
-    fs.writeFileSync(GLOBAL_CONFIG_PATH, yamlContent, "utf8");
-  } catch (error) {
-    throw new Error(`Failed to save global Claude config: ${error}`);
-  }
+  await saveGlobalAIAgentConfig(aiConfig);
 }
 
 export async function initializeGlobalClaudeConfig(): Promise<void> {
@@ -80,9 +99,9 @@ export async function initializeGlobalClaudeConfig(): Promise<void> {
   };
 
   await saveGlobalClaudeConfig(defaultConfig);
-  console.log(`Created global Claude config at ${GLOBAL_CONFIG_PATH}`);
+  console.log("Created global Claude config");
 }
 
 export function getGlobalConfigPath(): string {
-  return GLOBAL_CONFIG_PATH;
+  return LEGACY_CONFIG_PATH;
 }

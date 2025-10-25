@@ -69,16 +69,35 @@ export class WorktreeManager {
         response: `Created worktree "${worktreeName}"`,
       });
 
-      // Step 4: Execute Claude prompt plugin if enabled
-      const { executeClaudePromptForWorktree } = await import(
-        "@/src/plugins/claude-prompt/index.js"
+      // Step 4: Execute AI agent prompt plugin if enabled
+      const { loadGlobalAIAgentConfig } = await import(
+        "@/src/plugins/shared/config.js"
       );
-      await executeClaudePromptForWorktree(
-        worktree.path,
-        metadata,
-        options.task_description,
-        options.yolo,
-      );
+      const aiConfig = await loadGlobalAIAgentConfig();
+
+      if (aiConfig?.enabled) {
+        if (aiConfig.provider === "claude" || !aiConfig.last_used_provider) {
+          const { executeClaudePromptForWorktree } = await import(
+            "@/src/plugins/claude-prompt/index.js"
+          );
+          await executeClaudePromptForWorktree(
+            worktree.path,
+            metadata,
+            options.task_description,
+            options.yolo,
+          );
+        } else if (aiConfig.provider === "cursor") {
+          const { executeCursorPromptForWorktree } = await import(
+            "@/src/plugins/cursor-agent/index.js"
+          );
+          await executeCursorPromptForWorktree(
+            worktree.path,
+            metadata,
+            options.task_description,
+            options.yolo,
+          );
+        }
+      }
 
       return {
         task_id: metadata.worktree.id,

@@ -7,6 +7,7 @@
 
 import type { McpTool } from "@/src/tools/types";
 import type { WorktreeManager } from "@/src/worktree/manager";
+import { WorktreeMetadataManager } from "@/src/worktree/metadata";
 import { sharedParameters } from "@/src/schemas/config-schema";
 import { resumeClaudeSession } from "@/src/plugins/claude-prompt/index";
 import {
@@ -22,14 +23,14 @@ export const worktreePrompt = {
     aliases: ["prompt", "chat"],
     flags: [
       {
-        param: "worktree_identifier",
-        alias: "i",
-        description: "Worktree identifier (task ID, name, or path)",
-      },
-      {
         param: "prompt",
         alias: "m",
         description: "Optional prompt to send when resuming (for scripting)",
+      },
+      {
+        param: "worktree_identifier",
+        alias: "i",
+        description: "Worktree identifier (task ID, name, or path)",
       },
       {
         param: "setup",
@@ -46,9 +47,9 @@ export const worktreePrompt = {
     ],
   },
   cliFooter:
-    "💡 Try asking the MCP: 'Resume Claude session for task-245' or 'Setup Claude auto-prompt'\n💡 Run `gwtree prompt --setup` to initialize global Claude config\n💡 Run `gwtree prompt <identifier>` to resume a Claude session\n💡 Run `gwtree prompt <identifier> -m \"prompt\"` to resume with a specific prompt",
+    "💡 Try asking the MCP: 'Resume Claude session for task-245' or 'Setup Claude auto-prompt'\n💡 Run `gwtree prompt --setup` to initialize global Claude config\n💡 Run `gwtree prompt` to resume Claude session for current worktree\n💡 Run `gwtree prompt <identifier>` to resume a specific worktree session\n💡 Run `gwtree prompt -m \"prompt\"` to resume with a specific prompt",
   mcpFooter:
-    '💡 Set "setup: true" to initialize global Claude config\n💡 Provide worktree_identifier to resume a Claude session\n💡 Add optional "prompt" parameter to send a message when resuming',
+    '💡 Set "setup: true" to initialize global Claude config\n💡 Omit worktree_identifier to use current worktree\n💡 Provide worktree_identifier to resume a specific worktree session\n💡 Add optional "prompt" parameter to send a message when resuming',
   parameters: (z) => ({
     worktree_identifier: sharedParameters.worktree_identifier(z),
     prompt: z.string().optional().describe("Optional prompt to send on resume"),
@@ -77,6 +78,34 @@ export const worktreePrompt = {
       try {
         await initializeGlobalClaudeConfig();
         const configPath = getGlobalConfigPath();
+
+        // Add Claude sessions to existing worktrees
+        const cwd = process.cwd();
+        const worktrees = await WorktreeMetadataManager.listAllWorktrees(cwd);
+        let addedSessions = 0;
+
+        for (const worktree of worktrees) {
+          if (
+            worktree.metadata &&
+            !worktree.metadata.claude_session?.session_id
+          ) {
+            const { v4: uuidv4 } = await import("uuid");
+            const sessionId = uuidv4();
+
+            worktree.metadata.claude_session = {
+              enabled: true,
+              session_id: sessionId,
+              created_at: new Date().toISOString(),
+            };
+
+            await WorktreeMetadataManager.saveMetadata(
+              worktree.worktreePath,
+              worktree.metadata,
+            );
+            addedSessions++;
+          }
+        }
+
         return {
           content: [
             {
@@ -84,7 +113,8 @@ export const worktreePrompt = {
               text:
                 `✅ Global Claude configuration initialized!\n\n` +
                 `Config file: ${configPath}\n\n` +
-                `The Claude prompt plugin is now enabled for all new worktrees.\n` +
+                `The Claude prompt plugin is now enabled for all worktrees.\n` +
+                `Added Claude sessions to ${addedSessions} existing worktrees.\n\n` +
                 `Edit the config file to customize the prompt template or disable the plugin.\n\n` +
                 `Next steps:\n` +
                 `1. Create a new worktree: gwtree new "Your task description"\n` +
@@ -105,35 +135,20 @@ export const worktreePrompt = {
       }
     }
 
-    // Require worktree_identifier for resume
-    if (!worktree_identifier) {
-      return {
-        content: [
-          {
-            type: "text",
-            text:
-              `❌ Missing worktree identifier\n\n` +
-              `Usage:\n` +
-              `  gwtree prompt <worktree-identifier>         # Resume Claude session\n` +
-              `  gwtree prompt <identifier> -m "message"     # Resume with prompt\n` +
-              `  gwtree prompt --setup                       # Initialize config\n\n` +
-              `Run "gwtree list" to see available worktrees.`,
-          },
-        ],
-      };
-    }
-
     try {
+      // Use current worktree if no identifier provided
+      const identifier = worktree_identifier || process.cwd();
+
       // Find the worktree
       const worktree =
-        await worktreeManager.getWorktreeByPathOrTaskId(worktree_identifier);
+        await worktreeManager.getWorktreeByPathOrTaskId(identifier);
 
       if (!worktree) {
         return {
           content: [
             {
               type: "text",
-              text: `❌ Worktree not found: ${worktree_identifier}\n\nRun "gwtree list" to see available worktrees.`,
+              text: `❌ Worktree not found: ${identifier}\n\nRun "gwtree list" to see available worktrees.`,
             },
           ],
         };
