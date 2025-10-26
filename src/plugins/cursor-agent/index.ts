@@ -34,6 +34,10 @@ export async function executeCursorPrompt(
       return;
     }
 
+    // INTERACTIVE MODE: Launch Cursor Agent CLI with interactive session
+    // NOTE: This function should ONLY be called in interactive mode
+    // In non-interactive mode, the worktree manager skips calling this function
+
     const args = [];
     if (forceMode) {
       args.push("--force");
@@ -90,6 +94,10 @@ export async function resumeCursorSession(
         "Cursor Agent CLI not found. Install from: https://cursor.com",
       );
     }
+
+    // INTERACTIVE MODE: Resume Cursor Agent session
+    // NOTE: This function should ONLY be called in interactive mode
+    // In non-interactive mode, this should not be called
 
     const args = [];
     if (prompt) {

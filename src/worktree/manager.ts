@@ -70,12 +70,17 @@ export class WorktreeManager {
       });
 
       // Step 4: Execute AI agent prompt plugin if enabled
+      // Only run in interactive mode (CLI). Skip in non-interactive mode (MCP)
       const { loadGlobalAIAgentConfig } = await import(
         "@/src/plugins/shared/config.js"
       );
+      const { getExecutionContext } = await import("@/src/utils/constants.js");
+
+      const executionContext = getExecutionContext();
       const aiConfig = await loadGlobalAIAgentConfig();
 
-      if (aiConfig?.enabled) {
+      if (aiConfig?.enabled && executionContext.interactive) {
+        // INTERACTIVE MODE: Launch AI agent CLI session
         // Add a delay to allow user to read the feedback before launching AI agent
         console.log("\n⏳ Preparing AI agent...");
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -101,6 +106,11 @@ export class WorktreeManager {
             options.yolo,
           );
         }
+      } else if (aiConfig?.enabled && !executionContext.interactive) {
+        // NON-INTERACTIVE MODE (MCP): Just record the session metadata, don't launch
+        console.log(
+          "\n✅ AI agent enabled. Session metadata saved (non-interactive mode)",
+        );
       }
 
       return {

@@ -675,9 +675,8 @@ describe("Worktree Prompt Tool", () => {
     });
 
     it("should preserve metadata during switching", async () => {
-      const { resumeCursorSession } = await import(
-        "@/src/plugins/cursor-agent/index"
-      );
+      // Import cursor-agent to ensure module is loaded
+      await import("@/src/plugins/cursor-agent/index");
 
       // Switch to Cursor provider
       const cursorConfig: GlobalAIAgentConfig = {
@@ -691,6 +690,8 @@ describe("Worktree Prompt Tool", () => {
         worktreePath: testWorktreePath,
         metadata: {
           worktree: { name: "test-worktree", branch: "main" },
+          team: { assigned_users: [] },
+          conversation_history: [],
           git_info: { base_branch: "main" },
           claude_session: {
             enabled: true,
@@ -699,7 +700,7 @@ describe("Worktree Prompt Tool", () => {
           },
           // Additional metadata that should be preserved
           custom_data: { some: "value" },
-        },
+        } as any, // Use 'as any' to allow cursor_session to be added dynamically
       };
 
       mockWorktreeManager.getWorktreeByPathOrTaskId.mockResolvedValue(

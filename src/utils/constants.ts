@@ -17,6 +17,36 @@ export interface GlobalConfig {
 }
 
 /**
+ * Execution mode - determines whether plugins should run interactively
+ */
+export interface ExecutionContext {
+  /** Whether the execution is interactive (CLI) or non-interactive (MCP) */
+  interactive: boolean;
+}
+
+/**
+ * Global execution context
+ * Set to non-interactive for MCP server mode
+ */
+let executionContext: ExecutionContext = {
+  interactive: true, // Default to interactive for backward compatibility
+};
+
+/**
+ * Set the execution context (should be called at startup)
+ */
+export function setExecutionContext(context: ExecutionContext): void {
+  executionContext = context;
+}
+
+/**
+ * Get the current execution context
+ */
+export function getExecutionContext(): ExecutionContext {
+  return executionContext;
+}
+
+/**
  * Get the global configuration from environment variables
  */
 export function getGlobalConfig(): GlobalConfig {

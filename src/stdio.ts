@@ -27,6 +27,10 @@ async function loadWorktreeTools() {
 async function runServer() {
   const worktreeTools = await loadWorktreeTools();
 
+  // Set execution context to non-interactive for MCP server mode
+  const { setExecutionContext } = await import("./utils/constants.js");
+  setExecutionContext({ interactive: false });
+
   const transport = new StdioServerTransport();
   const server = new Server(
     {

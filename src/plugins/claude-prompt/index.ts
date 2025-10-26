@@ -35,6 +35,10 @@ export async function executeClaudePrompt(
       return;
     }
 
+    // INTERACTIVE MODE: Launch Claude CLI with interactive session
+    // NOTE: This function should ONLY be called in interactive mode
+    // In non-interactive mode, the worktree manager skips calling this function
+
     // Build command args - start interactive session with initial prompt
     const args = [prompt, "--session-id", sessionId];
     if (permissionMode) {
@@ -94,6 +98,10 @@ export async function resumeClaudeSession(
         "Claude CLI not found. Install from: https://claude.ai/download",
       );
     }
+
+    // INTERACTIVE MODE: Resume Claude CLI session
+    // NOTE: This function should ONLY be called in interactive mode
+    // In non-interactive mode, this should not be called
 
     // Build command args - prompt must come before --resume flag
     const args = [];
