@@ -79,6 +79,12 @@ export class WorktreeManager {
       const executionContext = getExecutionContext();
       const aiConfig = await loadGlobalAIAgentConfig();
 
+      // In non-interactive mode (MCP), always use permission mode for full automation
+      // In interactive mode (CLI), use the default permission mode from config
+      const effectivePermissionMode = executionContext.interactive
+        ? aiConfig?.permission_mode ?? false
+        : true; // Always automated in non-interactive mode
+
       if (aiConfig?.enabled && executionContext.interactive) {
         // INTERACTIVE MODE: Launch AI agent CLI session
         // Add a delay to allow user to read the feedback before launching AI agent
@@ -93,7 +99,7 @@ export class WorktreeManager {
             worktree.path,
             metadata,
             options.task_description,
-            options.yolo,
+            effectivePermissionMode,
           );
         } else if (aiConfig.provider === "cursor") {
           const { executeCursorPromptForWorktree } = await import(
@@ -103,13 +109,13 @@ export class WorktreeManager {
             worktree.path,
             metadata,
             options.task_description,
-            options.yolo,
+            effectivePermissionMode,
           );
         }
       } else if (aiConfig?.enabled && !executionContext.interactive) {
-        // NON-INTERACTIVE MODE (MCP): Just record the session metadata, don't launch
+        // NON-INTERACTIVE MODE (MCP): Session metadata saved with automated permission mode
         console.log(
-          "\n✅ AI agent enabled. Session metadata saved (non-interactive mode)",
+          "\n✅ AI agent enabled. Session metadata saved (automated mode, non-interactive)",
         );
       }
 

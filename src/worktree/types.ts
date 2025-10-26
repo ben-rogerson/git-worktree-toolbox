@@ -73,7 +73,6 @@ export interface CreateWorktreeOptions {
   base_branch?: string;
   auto_invite_users?: string[];
   git_repo_path?: string;
-  yolo: boolean;
 }
 
 export interface WorktreeCreationResult {

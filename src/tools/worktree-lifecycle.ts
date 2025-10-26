@@ -53,38 +53,27 @@ export const createTaskWorktree = {
         description:
           "The path to the Git repo (Optional). Defaults to current repository.",
       },
-      {
-        param: "yolo",
-        alias: "y",
-        description:
-          "Launch Claude with dangerously-skip-permissions (yolo mode)",
-      },
     ],
   },
   cliFooter:
-    "💡 Try asking the MCP: 'New worktree for fixing the login bug' or 'Set up a new workspace for the user dashboard feature'\n💡 Run `gwtree go <task_id>` to open the worktree in your editor\n💡 Run `gwtree changes` to see all worktrees and their changes\n💡 Use `--yolo` flag to enable Claude yolo mode (dangerously-skip-permissions)",
+    "💡 Try asking the MCP: 'New worktree for fixing the login bug' or 'Set up a new workspace for the user dashboard feature'\n💡 Run `gwtree go <task_id>` to open the worktree in your editor\n💡 Run `gwtree changes` to see all worktrees and their changes",
   mcpFooter:
-    '💡 Use the "go" tool with the task ID to open the worktree in your editor\n💡 Use the "changes" tool to see all worktrees and their current status\n💡 Set "yolo: true" to enable Claude yolo mode (dangerously-skip-permissions)',
+    '💡 Use the "go" tool with the task ID to open the worktree in your editor\n💡 Use the "changes" tool to see all worktrees and their current status',
   parameters: (z) => ({
     task_description: z
       .string()
       .describe("Description of the task or feature to work on"),
     git_repo_path: sharedParameters.git_repo_path_optional(z),
     base_branch: sharedParameters.base_branch_optional(z),
-    yolo: z
-      .boolean()
-      .optional()
-      .describe("Launch Claude with dangerously-skip-permissions (yolo mode)"),
   }),
   cb: async (
     args: Record<string, unknown>,
     { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
-    const { task_description, base_branch, git_repo_path, yolo } = args as {
+    const { task_description, base_branch, git_repo_path } = args as {
       task_description: string;
       base_branch?: string;
       git_repo_path?: string;
-      yolo?: boolean;
     };
 
     const result = await assertGitRepoPath(git_repo_path);
@@ -108,7 +97,6 @@ export const createTaskWorktree = {
         task_description,
         base_branch,
         git_repo_path,
-        yolo: yolo || false,
       });
 
       return {
@@ -121,8 +109,7 @@ export const createTaskWorktree = {
               `Integration: Worktree-only mode\n` +
               `Worktree: ${wsResult.worktree_name}\n` +
               `Path: ${wsResult.worktree_path}\n` +
-              `Metadata: ${wsResult.metadata_path}\n` +
-              `Claude Mode: ${yolo ? "🚀 Yolo Mode (--dangerously-skip-permissions)" : "📋 Plan Mode"}`,
+              `Metadata: ${wsResult.metadata_path}`,
           },
         ],
       };
