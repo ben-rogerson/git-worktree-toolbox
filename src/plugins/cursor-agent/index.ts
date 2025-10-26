@@ -34,7 +34,7 @@ export async function executeCursorPrompt(
       return;
     }
 
-    const args = [prompt];
+    const args = [];
     if (forceMode) {
       args.push("--force");
     }
@@ -47,7 +47,9 @@ export async function executeCursorPrompt(
         `   Resume later with: gwtree prompt <worktree-identifier>\n`,
     );
 
-    const command = `cd "${worktreePath}" && cursor-agent ${args.join(" ")}`;
+    // Properly quote the prompt to handle spaces and newlines
+    const quotedPrompt = `"${prompt.replace(/"/g, '\\"')}"`;
+    const command = `cd "${worktreePath}" && cursor-agent ${quotedPrompt} ${args.join(" ")}`;
 
     const cursorProcess = spawn(command, {
       shell: true,
@@ -143,7 +145,9 @@ export async function resumeCursorSession(
           code === 1 &&
           stderrOutput.includes("No chat found with ID")
         ) {
-          console.log("\n⚠️  Session not found. Starting new session instead...\n");
+          console.log(
+            "\n⚠️  Session not found. Starting new session instead...\n",
+          );
 
           await executeCursorPrompt({
             worktreePath,

@@ -3,7 +3,6 @@
  */
 
 import * as path from "path";
-import * as fsPromises from "fs/promises";
 import { executeGitCommand } from "@/src/utils/git";
 import type { WorkTree } from "@/src/worktree/types";
 import { sharedParameters } from "@/src/schemas/config-schema";
@@ -31,6 +30,67 @@ export interface MissingMetadataResponse {
 }
 
 // ============================================================================
+// Git Repository Detection
+// ============================================================================
+
+/**
+ * Finds the nearest git repository by walking up the directory tree
+ * This is more reliable than using process.cwd() when the MCP server
+ * is running from a different directory than where the command was executed
+ */
+export const findNearestGitRepository = async (
+  startPath?: string,
+): Promise<string | null> => {
+  const fs = await import("fs");
+  const path = await import("path");
+
+  // Start from the provided path or current working directory
+  let currentPath = startPath ? path.resolve(startPath) : process.cwd();
+
+  // Walk up the directory tree until we find a .git directory
+  while (currentPath !== path.dirname(currentPath)) {
+    const gitDir = path.join(currentPath, ".git");
+
+    if (fs.existsSync(gitDir)) {
+      // Check if it's a valid git repository
+      try {
+        await executeGitCommand("git rev-parse --git-dir", {
+          cwd: currentPath,
+        });
+        return currentPath;
+      } catch {
+        // Not a valid git repository, continue searching
+      }
+    }
+
+    // Move up one directory level
+    currentPath = path.dirname(currentPath);
+  }
+
+  return null;
+};
+
+/**
+ * Gets the correct git repository path, preferring explicit path over auto-detection
+ */
+export const getGitRepositoryPath = async (
+  explicitPath?: string,
+): Promise<string | null> => {
+  // If explicit path provided, validate it
+  if (explicitPath) {
+    try {
+      await executeGitCommand("git rev-parse --git-dir", { cwd: explicitPath });
+      return path.resolve(explicitPath);
+    } catch {
+      return null;
+    }
+  }
+
+  // Otherwise, find the nearest git repository
+  return await findNearestGitRepository();
+};
+
+// ============================================================================
 // Git Repository Validation
 // ============================================================================
 
@@ -40,72 +100,21 @@ export interface MissingMetadataResponse {
 export const assertGitRepoPath = async (
   git_repo_path?: string,
 ): Promise<ValidationError | null> => {
-  // Default to current working directory if not provided
-  const targetPath = git_repo_path || process.cwd();
+  // Use the new detection function instead of process.cwd()
+  const targetPath = await getGitRepositoryPath(git_repo_path);
 
-  // Resolve to absolute path
-  const resolvedPath = path.resolve(targetPath);
-
-  // Check if path exists
-  try {
-    const stats = await fsPromises.stat(resolvedPath);
-    if (!stats.isDirectory()) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ Path exists but is not a directory: ${resolvedPath}`,
-          },
-        ],
-      };
-    }
-  } catch (error: unknown) {
-    const err = error as { code?: string; message?: string };
-    if (err.code === "ENOENT") {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ Directory does not exist: ${resolvedPath}`,
-          },
-        ],
-      };
-    } else if (err.code === "EACCES") {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ Permission denied accessing: ${resolvedPath}`,
-          },
-        ],
-      };
-    } else {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ Failed to access path: ${err.message}`,
-          },
-        ],
-      };
-    }
-  }
-
-  // Check if it's a git repository
-  try {
-    await executeGitCommand("git rev-parse --git-dir", { cwd: resolvedPath });
-  } catch (error: unknown) {
+  if (!targetPath) {
     return {
       content: [
         {
           type: "text",
-          text: `❌ Not a git repository: ${resolvedPath}\n\nRun 'git init' in this directory first.`,
+          text: `❌ No git repository found${git_repo_path ? ` at: ${git_repo_path}` : ""}\n\nRun 'git init' in a directory first, or navigate to a git repository.`,
         },
       ],
     };
   }
 
-  // All validations passed
+  // All validations passed (we already validated it's a git repo in getGitRepositoryPath)
   return null;
 };
 

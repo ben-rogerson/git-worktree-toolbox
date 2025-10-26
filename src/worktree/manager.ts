@@ -76,6 +76,10 @@ export class WorktreeManager {
       const aiConfig = await loadGlobalAIAgentConfig();
 
       if (aiConfig?.enabled) {
+        // Add a delay to allow user to read the feedback before launching AI agent
+        console.log("\n⏳ Preparing AI agent...");
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
         if (aiConfig.provider === "claude" || !aiConfig.last_used_provider) {
           const { executeClaudePromptForWorktree } = await import(
             "@/src/plugins/claude-prompt/index.js"

@@ -20,7 +20,7 @@ As a backup, use the `gwtree` command to run any of the mcp tools yourself.
 - `changes` - Review changes and optionally commit and push
 - `grab` - Pull in changes from a specific worktree
 - `pr` - Generate a link to create a pull/merge request
-- `prompt` - Resume Claude CLI sessions or setup Claude auto-prompt
+- `prompt` - Resume AI agent sessions or setup AI agent auto-prompt (Claude/Cursor)
 - `doctor` - Fix worktree metadata issues
 - `clean` - Archive unused worktrees
 
@@ -35,7 +35,7 @@ Once the MCP server is added, here's how you might phrase requests to activate e
 - **Review/Push changes**: "Show changes from task-245", "What files have I modified?", "Push changes for task-245"
 - **Grab changes**: "Get login bug worktree changes", "Merge updates from the dashboard branch", "Pull in changes from the API worktree"
 - **Create PR**: "Generate a pull request link", "Create a merge request for task-245", "Make a PR for the current changes"
-- **Claude prompt**: "Resume Claude session for task-245", "Setup Claude auto-prompt", "Continue Claude conversation in this worktree"
+- **AI agent prompt**: "Resume Claude session for task-245", "Setup Claude auto-prompt", "Setup Cursor Agent", "Continue conversation in this worktree"
 - **Fix issues**: "Fix my worktree metadata", "Repair worktree configuration", "Doctor the worktree setup"
 - **Clean up**: "Clean unused worktrees", "Archive old worktrees", "Remove completed worktrees"
 
@@ -96,10 +96,13 @@ gwtree doctor
 # Archive unused worktrees
 gwtree clean
 
-# Setup Claude auto-prompt plugin
-gwtree prompt --setup
+# Setup AI agent auto-prompt plugin (Claude by default)
+gwtree prompt setup
 
-# Resume Claude session for a worktree
+# Setup with Cursor Agent instead
+gwtree prompt setup --cursor
+
+# Resume AI agent session for a worktree
 gwtree prompt <worktree-id>
 
 # Show help with advanced flag usage examples
@@ -108,37 +111,39 @@ gwtree help
 
 </details>
 
-## Claude Prompt Plugin
+## AI Agent Prompt Plugin
 
-Auto-launch Claude CLI when creating worktrees, with persistent sessions for ongoing AI-assisted development.
+Auto-launch Claude CLI or Cursor Agent when creating worktrees, with persistent sessions for ongoing AI-assisted development.
 
 ### Quick Start
 
 ```bash
-# 1. Setup Claude plugin (one-time)
-gwtree prompt --setup
+# 1. Setup AI agent plugin (one-time)
+gwtree prompt setup              # Claude (default)
+gwtree prompt setup --cursor     # Cursor Agent
 
-# 2. Create worktree - Claude auto-launches
+# 2. Create worktree - AI agent auto-launches
 gwtree new "Add user authentication"
-# → Claude CLI starts with task context
+# → AI agent starts with task context
 # → Session ID saved in worktree metadata
 
-# 3. Resume Claude session later
+# 3. Resume AI agent session later
 gwtree prompt user-authentication-123
 # → Continue conversation with full history
 ```
 
 ### Features
 
-- **Auto-launch**: Claude CLI starts automatically with task context
-- **Session persistence**: Each worktree gets a unique Claude session
+- **Multi-provider**: Support for Claude CLI and Cursor Agent
+- **Auto-launch**: AI agent starts automatically with task context
+- **Session persistence**: Each worktree gets a unique session
 - **Resume capability**: Continue conversations anytime with `gwtree prompt`
-- **Customizable prompts**: Edit `~/.gwtree/claude-prompt.yaml` to customize templates
+- **Customizable prompts**: Edit `~/.gwtree/ai-agent.yaml` to customize templates
 - **Optional**: Disable globally or per-worktree
 
 ### Documentation
 
-See [src/plugins/claude-prompt/README.md](src/plugins/claude-prompt/README.md) for:
+See [src/plugins/claude-prompt/README.md](src/plugins/claude-prompt/README.md) and [src/plugins/cursor-agent/](src/plugins/cursor-agent/) for:
 - Detailed setup instructions
 - Template customization
 - Advanced usage examples

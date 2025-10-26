@@ -36,6 +36,7 @@ import {
 } from "@/src/worktree/types";
 import { getGlobalConfig } from "@/src/utils/constants";
 import { WORKTREE_METADATA_SCHEMA } from "@/src/schemas/config-schema";
+import { getGitRepositoryPath } from "@/src/tools/utils";
 
 export class WorktreeMetadataManager {
   private static readonly METADATA_FILE = "task.config.yaml";
@@ -381,7 +382,10 @@ export class WorktreeMetadataManager {
     metadata: WorktreeMetadata;
   } | null> {
     // Default to current working directory if not provided
-    const identifier = pathOrTaskId || process.cwd();
+    const identifier = pathOrTaskId || (await getGitRepositoryPath());
+    if (!identifier) {
+      return null;
+    }
 
     // First, check if it's a direct path to a worktree
     if (path.isAbsolute(identifier) && fs.existsSync(identifier)) {

@@ -17,7 +17,7 @@ import {
   gitCommit,
   gitPush,
 } from "@/src/utils/git";
-import { sharedParameters } from "./utils";
+import { sharedParameters, getGitRepositoryPath } from "./utils";
 
 export const worktreeChanges = {
   name: "changes",
@@ -64,7 +64,17 @@ export const worktreeChanges = {
     try {
       // If no identifier provided, show all worktrees
       if (!worktree_identifier) {
-        const cwd = process.cwd();
+        const cwd = await getGitRepositoryPath();
+        if (!cwd) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "❌ No git repository found in current directory or parent directories.\n\nNavigate to a git repository first.",
+              },
+            ],
+          };
+        }
         const worktrees = await WorktreeMetadataManager.listAllWorktrees(cwd);
 
         if (worktrees.length === 0) {
@@ -545,7 +555,17 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
       };
     }
 
-    const currentDir = process.cwd();
+    const currentDir = await getGitRepositoryPath();
+    if (!currentDir) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `❌ No git repository found in current directory or parent directories.\n\nNavigate to a git repository first.`,
+          },
+        ],
+      };
+    }
 
     // Detect the git repository from current directory
     const ownerRepo = await detectWorktreeOwnerRepo(currentDir);

@@ -161,6 +161,17 @@ export async function parseArgs(
         i += 2;
       }
     } else {
+      // Special handling for boolean flag keywords as positional args
+      const booleanFlagKeyword = tool.cli?.flags?.find(
+        (f) => f.param === arg && getParamType(f.param, typeMap) === "boolean",
+      );
+
+      if (booleanFlagKeyword) {
+        toolArgs[booleanFlagKeyword.param] = true;
+        i++;
+        continue;
+      }
+
       // Positional argument - treat as first string flag if none set yet
       const firstStringFlag = tool.cli?.flags?.find((f) => {
         const type = getParamType(f.param, typeMap);

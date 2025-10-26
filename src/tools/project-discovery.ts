@@ -12,7 +12,7 @@ import { WorktreeMetadataManager } from "@/src/worktree/metadata";
 import type { WorktreeMetadata } from "@/src/worktree/types";
 import { ensureWorktreeHasMetadata } from "./worktree-lifecycle";
 import { detectWorktreeOwnerRepo, gitBranchHasRemote } from "@/src/utils/git";
-import { sharedParameters } from "./utils";
+import { sharedParameters, getGitRepositoryPath } from "./utils";
 
 // ============================================================================
 // Types
@@ -362,7 +362,17 @@ export const listProjects = {
 
     try {
       // Check if we're currently in a git repository
-      const currentDir = process.cwd();
+      const currentDir = await getGitRepositoryPath();
+      if (!currentDir) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "❌ No git repository found in current directory or parent directories.\n\nNavigate to a git repository first.",
+            },
+          ],
+        };
+      }
       const isInGitRepo = isGitRepository(currentDir);
       const ownerRepo = await detectWorktreeOwnerRepo(currentDir);
 

@@ -25,7 +25,7 @@ import {
   getDefaultBranch,
 } from "@/src/utils/git";
 import { ensureDirectory } from "@/src/utils/fs";
-import { assertGitRepoPath } from "@/src/tools/utils";
+import { assertGitRepoPath, getGitRepositoryPath } from "@/src/tools/utils";
 import { WorkTree, WorkTreeError } from "@/src/worktree/types";
 
 /**
@@ -106,7 +106,13 @@ export async function createWorkTree(
   if (customPath) {
     workTreePath = customPath;
   } else {
-    const currentDir = process.cwd();
+    const currentDir = await getGitRepositoryPath(gitRepoPath);
+    if (!currentDir) {
+      throw createWorkTreeError(
+        "No git repository found in current directory or parent directories",
+        "INVALID_OPERATION",
+      );
+    }
     if (currentDir.includes("/worktrees/")) {
       const worktreesIndex = currentDir.indexOf("/worktrees/");
       const basePath = currentDir.substring(
@@ -306,7 +312,13 @@ export async function removeWorkTree(
     }
 
     // Prevent removal of main work tree with multiple checks
-    const currentDir = process.cwd();
+    const currentDir = await getGitRepositoryPath();
+    if (!currentDir) {
+      throw createWorkTreeError(
+        "No git repository found in current directory or parent directories",
+        "INVALID_OPERATION",
+      );
+    }
     const targetPath = path.resolve(targetWorkTree.path);
     const defaultBranch = await getDefaultBranch();
 

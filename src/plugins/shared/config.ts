@@ -54,7 +54,9 @@ export async function saveGlobalAIAgentConfig(
   }
 }
 
-export async function initializeGlobalAIAgentConfig(): Promise<void> {
+export async function initializeGlobalAIAgentConfig(
+  provider?: AIAgentProvider,
+): Promise<void> {
   const existing = await loadGlobalAIAgentConfig();
   if (existing) {
     console.log("Global AI agent config already exists");
@@ -63,7 +65,7 @@ export async function initializeGlobalAIAgentConfig(): Promise<void> {
 
   const defaultConfig: GlobalAIAgentConfig = {
     enabled: true,
-    provider: "claude",
+    provider: provider || "claude",
     prompt_template: DEFAULT_PROMPT_TEMPLATE,
     permission_mode: false,
   };

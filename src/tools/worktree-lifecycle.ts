@@ -24,6 +24,7 @@ import {
   assertGitRepoPath,
   createMissingMetadataResponse,
   sharedParameters,
+  getGitRepositoryPath,
 } from "./utils";
 
 // ============================================================================
@@ -960,7 +961,17 @@ export const doctorWorktrees = {
         return result;
       }
 
-      const targetPath = git_repo_path || process.cwd();
+      const targetPath = await getGitRepositoryPath(git_repo_path);
+      if (!targetPath) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `❌ No git repository found${git_repo_path ? ` at: ${git_repo_path}` : ""}\n\nRun 'git init' in a directory first, or navigate to a git repository.`,
+            },
+          ],
+        };
+      }
       const worktrees =
         await WorktreeMetadataManager.listAllWorktrees(targetPath);
 
