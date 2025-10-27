@@ -24,9 +24,6 @@ describe("WorktreeManager", () => {
       created_by: "user123",
       status: "active",
     },
-    team: {
-      assigned_users: [],
-    },
     conversation_history: [],
     git_info: {
       base_branch: "main",
@@ -61,7 +58,6 @@ describe("WorktreeManager", () => {
       const result = await manager.createWorktree({
         task_description: "Implement new feature",
         base_branch: "main",
-        yolo: false,
       });
 
       expect(mockGitOps.createWorkTree).toHaveBeenCalled();
@@ -76,7 +72,6 @@ describe("WorktreeManager", () => {
       await manager.createWorktree({
         task_description: "Test",
         git_repo_path: "/custom/repo",
-        yolo: false,
       });
 
       expect(mockGitOps.createWorkTree).toHaveBeenCalledWith(
@@ -94,24 +89,8 @@ describe("WorktreeManager", () => {
       await expect(
         manager.createWorktree({
           task_description: "Test",
-          yolo: false,
         }),
       ).rejects.toThrow("Git operation failed");
-    });
-
-    it("should handle auto-invite users", async () => {
-      await manager.createWorktree({
-        task_description: "Test",
-        auto_invite_users: ["user1", "user2"],
-        yolo: false,
-      });
-
-      expect(mockMetadataManager.createMetadata).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          auto_invite_users: ["user1", "user2"],
-        }),
-      );
     });
   });
 

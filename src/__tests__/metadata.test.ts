@@ -29,9 +29,6 @@ describe("WorktreeMetadataManager", () => {
       created_by: "test-user",
       status: "active",
     },
-    team: {
-      assigned_users: [],
-    },
     conversation_history: [],
     git_info: {
       base_branch: "main",
@@ -61,23 +58,6 @@ describe("WorktreeMetadataManager", () => {
       );
 
       expect(result.worktree.created_by).toBe("system");
-      expect(result.team.assigned_users).toHaveLength(0);
-    });
-
-    it("should handle auto-invite users", async () => {
-      const result = await WorktreeMetadataManager.createMetadata(
-        testWorktreePath,
-        {
-          worktree_name: "test",
-          branch: "feature",
-          task_description: "Test task",
-          auto_invite_users: ["collaborator1", "collaborator2"],
-        },
-      );
-
-      expect(result.team.assigned_users).toHaveLength(2);
-      expect(result.team.assigned_users[0].role).toBe("collaborator");
-      expect(result.team.assigned_users[1].role).toBe("collaborator");
     });
   });
 

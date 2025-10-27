@@ -447,7 +447,6 @@ export const worktreeChanges = {
 
       const integrationInfo = "Worktree-only mode";
 
-      const teamSize = metadata.team.assigned_users.length;
       const conversationCount = metadata.conversation_history.length;
 
       const pushNotice = push_changes
@@ -468,7 +467,6 @@ export const worktreeChanges = {
               `• Path: ${targetWorktreePath}\n` +
               `• Created: ${new Date(metadata.worktree?.created_at ?? "").toLocaleDateString()}\n` +
               `• Created By: ${metadata.worktree.created_by}\n` +
-              `• Team Size: ${teamSize} member${teamSize !== 1 ? "s" : ""}\n` +
               `• Conversations: ${conversationCount}\n` +
               `• Integration: ${integrationInfo}\n\n` +
               `Git Changes:\n` +

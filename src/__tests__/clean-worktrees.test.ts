@@ -26,9 +26,6 @@ describe("cleanWorktrees", () => {
       created_by: "user123",
       status: "active",
     },
-    team: {
-      assigned_users: [],
-    },
     conversation_history: [],
     git_info: {
       base_branch: "main",

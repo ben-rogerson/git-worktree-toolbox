@@ -57,7 +57,6 @@ export class WorktreeManager {
         {
           task_description: options.task_description,
           base_branch: options.base_branch,
-          auto_invite_users: options.auto_invite_users,
           worktree_name: worktreeName,
           branch: branchName,
         },
@@ -82,7 +81,7 @@ export class WorktreeManager {
       // In non-interactive mode (MCP), always use permission mode for full automation
       // In interactive mode (CLI), use the default permission mode from config
       const effectivePermissionMode = executionContext.interactive
-        ? aiConfig?.permission_mode ?? false
+        ? (aiConfig?.permission_mode ?? false)
         : true; // Always automated in non-interactive mode
 
       if (aiConfig?.enabled && executionContext.interactive) {
@@ -113,17 +112,15 @@ export class WorktreeManager {
           );
         }
       } else if (aiConfig?.enabled && !executionContext.interactive) {
-        // NON-INTERACTIVE MODE (MCP): Session metadata saved with automated permission mode
-        console.log(
-          "\n✅ AI agent enabled. Session metadata saved (automated mode, non-interactive)",
-        );
+        // NON-INTERACTIVE MODE (MCP): Skip AI agent execution
+        // AI agents require interactive sessions and console.log() breaks MCP protocol
+        // The worktree is created, but no AI agent is launched
       }
 
       return {
         task_id: metadata.worktree.id,
         worktree_name: worktreeName,
         worktree_path: worktree.path,
-        invited_users: [],
         metadata_path: await WorktreeMetadataManager.getMetadataPath(
           worktree.path,
         ),
