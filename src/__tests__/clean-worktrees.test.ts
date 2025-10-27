@@ -350,7 +350,7 @@ describe("cleanWorktrees", () => {
       ).mockResolvedValue();
 
       const result = await cleanWorktrees.cb(
-        { dry_run: false },
+        { yes: true },
         { worktreeManager: mockWorktreeManager },
       );
 
@@ -382,7 +382,7 @@ describe("cleanWorktrees", () => {
       ).mockRejectedValue(new Error("Archive failed"));
 
       const result = await cleanWorktrees.cb(
-        { dry_run: false },
+        { yes: true },
         { worktreeManager: mockWorktreeManager },
       );
 
@@ -420,7 +420,7 @@ describe("cleanWorktrees", () => {
         .mockRejectedValueOnce(new Error("Archive failed")); // Second one fails
 
       const result = await cleanWorktrees.cb(
-        { dry_run: false },
+        { yes: true },
         { worktreeManager: mockWorktreeManager },
       );
 

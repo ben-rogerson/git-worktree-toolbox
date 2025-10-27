@@ -28,15 +28,6 @@ export const WORKTREE_METADATA_SCHEMA = z.object({
     created_by: z.string(),
     status: z.enum(["active", "completed", "archived"]),
   }),
-  team: z.object({
-    assigned_users: z.array(
-      z.object({
-        user_id: z.string(),
-        role: z.enum(["owner", "collaborator"]),
-        joined_at: z.string(),
-      }),
-    ),
-  }),
   conversation_history: z.array(
     z.object({
       id: z.string(),

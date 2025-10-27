@@ -11,6 +11,13 @@ vi.mock("util", () => ({
   promisify: vi.fn(() => mockExecAsync),
 }));
 
+// Mock the git repository path detection
+vi.mock("../tools/utils", () => ({
+  assertGitRepoPath: vi.fn().mockResolvedValue(null),
+  getGitRepositoryPath: vi.fn().mockResolvedValue("/test/repo"),
+  findNearestGitRepository: vi.fn().mockResolvedValue("/test/repo"),
+}));
+
 import {
   createWorkTree,
   listWorkTrees,
@@ -24,6 +31,13 @@ vi.mock("fs");
 
 vi.mock("uuid", () => ({
   v4: vi.fn(() => "test-uuid-123"),
+}));
+
+vi.mock("../utils/fs", () => ({
+  ensureDirectory: vi.fn().mockResolvedValue(undefined),
+  ensureDirectorySync: vi.fn(),
+  writeFileWithDirectorySync: vi.fn(),
+  ensureWorktreesReadme: vi.fn(),
 }));
 
 const mockFs = vi.mocked(fs);
@@ -111,8 +125,11 @@ describe("Work Trees", () => {
       });
 
       it("should validate worktrees folder can be created (early check)", async () => {
-        // Mock mkdir to fail for parent worktrees directory
-        mockFs.mkdir.mockRejectedValue(new Error("EACCES: permission denied"));
+        // Import ensureDirectory mock
+        const { ensureDirectory } = await import("../utils/fs");
+        (ensureDirectory as any).mockRejectedValueOnce(
+          new Error("EACCES: permission denied"),
+        );
 
         await expect(createWorkTree("test", "main")).rejects.toThrow(
           "Cannot create worktrees folder",
@@ -120,27 +137,28 @@ describe("Work Trees", () => {
       });
 
       it("should reference BASE_WORKTREES_PATH in error when worktrees folder cannot be created", async () => {
-        // Mock mkdir to fail for parent worktrees directory
-        mockFs.mkdir.mockRejectedValue(new Error("EACCES: permission denied"));
+        // Import ensureDirectory mock
+        const { ensureDirectory } = await import("../utils/fs");
+        (ensureDirectory as any).mockRejectedValueOnce(
+          new Error("EACCES: permission denied"),
+        );
 
-        try {
-          await createWorkTree("test", "main");
-          throw new Error("Expected error to be thrown");
-        } catch (error) {
-          expect((error as Error).message).toContain("BASE_WORKTREES_PATH");
-        }
+        await expect(createWorkTree("test", "main")).rejects.toThrow(
+          "BASE_WORKTREES_PATH",
+        );
       });
 
       it("should validate path permissions after parent folder check", async () => {
-        // Mock mkdir to succeed for parent dir but fail for final path
-        mockFs.mkdir
+        // Import ensureDirectory mock
+        const { ensureDirectory } = await import("../utils/fs");
+        (ensureDirectory as any)
           .mockResolvedValueOnce(undefined) // Parent worktrees dir succeeds
           .mockRejectedValueOnce(new Error("EACCES: permission denied")); // Final path fails
 
         mockExecAsync.mockResolvedValueOnce({ stdout: "", stderr: "" }); // listWorkTrees
 
         await expect(createWorkTree("test", "main")).rejects.toThrow(
-          "Failed to create directory",
+          "Permission denied",
         );
       });
 

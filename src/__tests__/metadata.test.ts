@@ -63,6 +63,10 @@ describe("WorktreeMetadataManager", () => {
 
   describe("loadMetadata", () => {
     it("should load valid metadata", async () => {
+      mockFs.existsSync.mockReturnValue(true);
+      const fileContent = Buffer.from(yaml.dump(mockMetadata));
+      mockFs.readFileSync.mockReturnValue(fileContent);
+
       const result =
         await WorktreeMetadataManager.loadMetadata(testWorktreePath);
 
@@ -188,6 +192,14 @@ describe("WorktreeMetadataManager", () => {
 
   describe("getWorktreeByPathOrTaskId", () => {
     it("should find by absolute path", async () => {
+      // Mock path.isAbsolute to return true for the test path
+      mockFs.existsSync.mockImplementation((path) => {
+        return (
+          String(path).includes(testWorktreePath) ||
+          String(path).includes(".gwtree")
+        );
+      });
+
       const result =
         await WorktreeMetadataManager.getWorktreeByPathOrTaskId(
           testWorktreePath,
