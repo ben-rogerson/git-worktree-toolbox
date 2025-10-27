@@ -113,7 +113,7 @@ gwtree help
 
 ## AI Agent Prompt Plugin
 
-Auto-launch Claude CLI or Cursor Agent when creating worktrees, with persistent sessions for ongoing AI-assisted development.
+When using the CLI, an interactive session with either Claude CLI or Cursor Agent can be automatically spawned in the new workspace, ready to use.
 
 ### Quick Start
 
@@ -134,24 +134,18 @@ gwtree prompt user-authentication-123
 
 ### Features
 
-- **Multi-provider**: Support for Claude CLI and Cursor Agent
 - **Auto-launch**: AI agent starts automatically with task context
 - **Session persistence**: Each worktree gets a unique session
 - **Resume capability**: Continue conversations anytime with `gwtree prompt`
 - **Customizable prompts**: Edit `~/.gwtree/ai-agent.yaml` to customize templates
+- **Switchable providers**: Switch between Claude CLI and Cursor Agent
 - **Optional**: Disable globally or per-worktree
 
-### Documentation
-
-See [src/plugins/claude-prompt/README.md](src/plugins/claude-prompt/README.md) and [src/plugins/cursor-agent/](src/plugins/cursor-agent/) for:
-- Detailed setup instructions
-- Template customization
-- Advanced usage examples
-- Troubleshooting guide
+See [src/plugins/claude-prompt/README.md](src/plugins/claude-prompt/README.md) and [src/plugins/cursor-agent/](src/plugins/cursor-agent/) for more information.
 
 ### Configuration
 
-Configure the worktrees folder and project directories using environment variables (optional):
+Optionally, configure the worktrees folder and project directories using environment variables:
 
 ```bash
 # Storage directory for worktrees

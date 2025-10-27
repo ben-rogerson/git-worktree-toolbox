@@ -63,7 +63,7 @@ export const createTaskWorktree = {
     task_description: z
       .string()
       .describe("Description of the task or feature to work on"),
-    git_repo_path: sharedParameters.git_repo_path_optional(z),
+    git_repo_path: sharedParameters.git_repo_path(z),
     base_branch: sharedParameters.base_branch_optional(z),
   }),
   cb: async (
@@ -472,30 +472,30 @@ export const cleanWorktrees = {
         description: "Git repository path (optional)",
       },
       {
-        param: "dry_run",
-        alias: "d",
-        description: "Show what would be archived without actually archiving",
+        param: "yes",
+        alias: "y",
+        description: "Actually perform the cleanup (default is dry run)",
       },
     ],
   },
   cliFooter:
-    "💡 Try asking the MCP: 'Clean unused worktrees' or 'Archive old worktrees'\n💡 Run `gwtree clean -d` to preview what would be archived (dry run)\n💡 Run `gwtree list` to see all available worktrees",
+    "💡 Try asking the MCP: 'Clean unused worktrees' or 'Archive old worktrees'\n💡 Run `gwtree clean` to preview what would be archived (dry run by default)\n💡 Run `gwtree clean -y` to actually perform the cleanup\n💡 Run `gwtree list` to see all available worktrees",
   mcpFooter:
-    '💡 Set "dry_run: true" to preview what would be archived without actually archiving\n💡 Use the "list" tool to see all available worktrees',
+    '💡 Default is dry run mode - preview what would be archived\n💡 Set "yes: true" to actually perform the cleanup\n💡 Use the "list" tool to see all available worktrees',
   parameters: (z) => ({
     git_repo_path: sharedParameters.git_repo_path_optional(z),
-    dry_run: z
+    yes: z
       .boolean()
       .optional()
-      .describe("Show what would be archived without actually archiving"),
+      .describe("Actually perform the cleanup (default is dry run)"),
   }),
   cb: async (
     args: Record<string, unknown>,
     { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
-    const { git_repo_path, dry_run } = args as {
+    const { git_repo_path, yes } = args as {
       git_repo_path?: string;
-      dry_run?: boolean;
+      yes?: boolean;
     };
 
     const result = await assertGitRepoPath(git_repo_path);
@@ -671,8 +671,8 @@ export const cleanWorktrees = {
         responseText += `\n`;
       }
 
-      // Perform archiving if not dry run
-      if (!dry_run && workspacesToArchive.length > 0) {
+      // Perform archiving if yes flag is set
+      if (yes && workspacesToArchive.length > 0) {
         responseText += `🔄 Archiving workspaces...\n\n`;
 
         const archiveResults: Array<{
@@ -726,9 +726,9 @@ export const cleanWorktrees = {
             responseText += `  • ${result.name} - ${result.error}\n`;
           }
         }
-      } else if (dry_run) {
+      } else if (workspacesToArchive.length > 0) {
         responseText += `🔍 Dry run mode - no workspaces were actually archived.\n`;
-        responseText += `Set dry_run to false to perform the cleanup.\n`;
+        responseText += `Run 'gwtree clean -y' to perform the cleanup.\n`;
       } else {
         responseText += `✨ All workspaces are clean - nothing to archive!\n`;
       }

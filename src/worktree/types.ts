@@ -18,20 +18,9 @@ export interface WorktreeInfo {
   status: "active" | "completed" | "archived";
 }
 
-export interface TeamMember {
-  user_id: string;
-  role: "owner" | "collaborator";
-  joined_at: string;
-}
-
-export interface TeamInfo {
-  assigned_users: TeamMember[];
-}
-
 export interface ConversationEntry {
   id: string;
   timestamp: string;
-  user_id?: string;
   prompt: string;
   response: string;
   commit_hash?: string;
@@ -61,7 +50,6 @@ export interface CursorSessionConfig {
 
 export interface WorktreeMetadata {
   worktree: WorktreeInfo;
-  team: TeamInfo;
   conversation_history: ConversationEntry[];
   git_info: GitInfo;
   claude_session?: ClaudeSessionConfig;
@@ -71,7 +59,6 @@ export interface WorktreeMetadata {
 export interface CreateWorktreeOptions {
   task_description: string;
   base_branch?: string;
-  auto_invite_users?: string[];
   git_repo_path?: string;
 }
 
@@ -79,7 +66,6 @@ export interface WorktreeCreationResult {
   task_id: string;
   worktree_name: string;
   worktree_path: string;
-  invited_users: string[];
   metadata_path: string;
 }
 

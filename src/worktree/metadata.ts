@@ -102,9 +102,6 @@ export class WorktreeMetadataManager {
         created_by: "system",
         status: "active",
       },
-      team: {
-        assigned_users: [],
-      },
       conversation_history: [],
       git_info: {
         base_branch: options.base_branch || defaultBranch,
@@ -112,17 +109,6 @@ export class WorktreeMetadataManager {
         remote_url: remoteUrl || undefined,
       },
     };
-
-    // Add auto-invited users
-    if (options.auto_invite_users) {
-      for (const userId of options.auto_invite_users) {
-        metadata.team.assigned_users.push({
-          user_id: userId,
-          role: "collaborator",
-          joined_at: new Date().toISOString(),
-        });
-      }
-    }
 
     await this.saveMetadata(worktreePath, metadata);
 
@@ -228,7 +214,6 @@ export class WorktreeMetadataManager {
             conversationHistory.push({
               id: rawConv.id,
               timestamp: rawConv.timestamp,
-              user_id: rawConv.user_id,
               prompt: rawConv.prompt,
               response: response,
             });
@@ -268,9 +253,6 @@ export class WorktreeMetadataManager {
           created_at: createdAt,
           created_by: createdBy,
           status: status,
-        },
-        team: {
-          assigned_users: validTeamMembers,
         },
         conversation_history: conversationHistory,
         git_info: gitInfo,
