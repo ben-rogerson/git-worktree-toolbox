@@ -240,7 +240,7 @@ async function buildWorktreesSection(
   showArchived: boolean,
 ): Promise<string> {
   if (projectsWithWorktrees.length === 0) {
-    return `No projects with worktrees found.\n`;
+    return `No projects with worktrees found.`;
   }
 
   const projectSections = await Promise.all(

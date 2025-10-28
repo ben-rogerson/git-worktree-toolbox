@@ -382,10 +382,9 @@ export const worktreePrompt = {
             type: "text",
             text:
               `❌ No AI agent session found for worktree "${worktree.metadata.worktree.name}"\n\n` +
-              `This worktree was not created with any AI agent prompt plugin enabled.\n\n` +
-              `To enable:\n` +
-              `1. Run: gwtree prompt setup --${provider}\n` +
-              `2. Create new worktrees with: gwtree new "task description"`,
+              `To connect an AI agent to this worktree:\n\n` +
+              `- For claude cli run: gwtree prompt setup\n` +
+              `- For cursor agent run: gwtree prompt setup --cursor`,
           },
         ],
       };

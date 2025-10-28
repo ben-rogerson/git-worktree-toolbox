@@ -100,9 +100,12 @@ export async function resumeCursorSession(
     // In non-interactive mode, this should not be called
 
     const args = [];
-    if (prompt) {
-      args.push(prompt);
-    }
+
+    // Always provide a prompt for cursor-agent (it requires one even for resume)
+    // If no prompt is provided, use a default "continue" message
+    const resumePrompt = prompt || "continue";
+    args.push(`"${resumePrompt.replace(/"/g, '\\"')}"`);
+
     args.push("--resume", chatId);
     if (forceMode) {
       args.push("--force");

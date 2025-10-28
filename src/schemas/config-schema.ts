@@ -50,6 +50,15 @@ export const WORKTREE_METADATA_SCHEMA = z.object({
       prompt_template: z.string().optional(),
     })
     .optional(),
+  cursor_session: z
+    .object({
+      enabled: z.boolean(),
+      chat_id: z.string(),
+      created_at: z.string(),
+      last_resumed_at: z.string().optional(),
+      prompt_template: z.string().optional(),
+    })
+    .optional(),
 });
 
 // ============================================================================
