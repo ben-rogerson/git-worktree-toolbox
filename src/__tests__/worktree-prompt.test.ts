@@ -361,9 +361,11 @@ describe("Worktree Prompt Tool", () => {
 
       expect(result.content[0].text).toContain("❌ No AI agent session found");
       expect(result.content[0].text).toContain(
-        "This worktree was not created with any AI agent prompt plugin enabled",
+        `❌ No AI agent session found for worktree "test-worktree"`,
       );
-      expect(result.content[0].text).toContain("gwtree prompt setup --claude");
+      expect(result.content[0].text).toContain(
+        "For claude cli run: gwtree prompt setup",
+      );
     });
   });
 
