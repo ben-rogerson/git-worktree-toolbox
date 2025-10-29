@@ -312,7 +312,11 @@ export async function gitMergeDryRun(
     await executeGitCommand(command, options);
 
     // If we reach here, no conflicts - abort the merge
-    await executeGitCommand("git merge --abort", options);
+    try {
+      await executeGitCommand("git merge --abort", options);
+    } catch {
+      // Ignore abort errors (e.g., if there's no merge to abort)
+    }
     return { conflicts: false, conflictFiles: [] };
   } catch (error: any) {
     if (error.stderr?.includes("CONFLICT")) {
@@ -425,7 +429,31 @@ export async function gitDiffFileList(
   return result.stdout
     .trim()
     .split("\n")
-    .filter((line) => !shouldIgnoreFile(line));
+    .filter((line) => line && !shouldIgnoreFile(line));
+}
+
+/**
+ * Gets list of uncommitted files (staged, modified, or untracked)
+ */
+export async function gitUncommittedFileList(
+  options: GitCommandOptions = {},
+): Promise<string[]> {
+  const statusOutput = await gitStatus(options);
+  const lines = statusOutput
+    .trim()
+    .split("\n")
+    .filter((line) => line.trim());
+
+  return lines
+    .map((line) => {
+      // Parse git status line format: "XY filename"
+      // X is staged status, Y is working tree status
+      const trimmedLine = line.trim();
+      const match = trimmedLine.match(/^[AMDRC?!]{1,2}\s+(.+)$/);
+      if (!match) return null;
+      return match[1];
+    })
+    .filter((file): file is string => file !== null && !shouldIgnoreFile(file));
 }
 
 export async function gitHasPendingChanges(

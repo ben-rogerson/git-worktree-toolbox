@@ -11,6 +11,7 @@ import {
   gitCheckoutFiles,
   executeGitCommand,
   gitDiffFileList,
+  gitUncommittedFileList,
   detectWorktreeOwnerRepo,
   getDefaultBranch,
   gitAdd,
@@ -566,16 +567,12 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
     }
 
     // Detect the git repository from current directory
-    const ownerRepo = await detectWorktreeOwnerRepo(currentDir);
+    // If we're in a worktree, get its owner repo. Otherwise, use the current repo.
+    let ownerRepo = await detectWorktreeOwnerRepo(currentDir);
     if (!ownerRepo) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `❌ Current directory is not a git repository or worktree.\n\nNavigate to a git repository or worktree first.`,
-          },
-        ],
-      };
+      // We're not in a worktree, but we might be in the main repository
+      // Use currentDir as the owner repo (already validated as a git repo)
+      ownerRepo = currentDir;
     }
 
     const targetWorkTree = {
@@ -646,21 +643,49 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
 
       if (dryRun) {
         // Get list of files that would be changed
-        let changedFiles: string[] = [];
+        let committedFiles: string[] = [];
+        let uncommittedFiles: string[] = [];
+
         try {
-          changedFiles = await gitDiffFileList(
+          // Get committed changes between branches
+          committedFiles = await gitDiffFileList(
             currentBranch,
             targetWorkTree.branch,
             gitOptions,
           );
         } catch (error) {
-          console.warn(`Warning: Could not get file list: ${error}`);
+          console.warn(`Warning: Could not get committed file list: ${error}`);
         }
 
+        try {
+          // Get uncommitted changes in the source worktree
+          uncommittedFiles = await gitUncommittedFileList({
+            cwd: worktree.worktreePath,
+          });
+        } catch (error) {
+          console.warn(
+            `Warning: Could not get uncommitted file list: ${error}`,
+          );
+        }
+
+        // Combine and deduplicate the file lists
+        const allFiles = Array.from(
+          new Set([...committedFiles, ...uncommittedFiles]),
+        );
+
         const filesText =
-          changedFiles.length > 0
-            ? `\n\nFiles to be changed (${changedFiles.length}):\n${changedFiles.map((file) => `• ${file}`).join("\n")}`
+          allFiles.length > 0
+            ? `\n\nFiles to be changed (${allFiles.length}):\n${allFiles.map((file) => `• ${file}`).join("\n")}`
             : "\n\nNo files to change.";
+
+        const changeTypeText =
+          committedFiles.length > 0 && uncommittedFiles.length > 0
+            ? `\n• Committed changes: ${committedFiles.length}\n• Uncommitted changes: ${uncommittedFiles.length}`
+            : committedFiles.length > 0
+              ? `\n• All changes are committed`
+              : uncommittedFiles.length > 0
+                ? `\n• All changes are uncommitted`
+                : "";
 
         return {
           content: [
@@ -673,6 +698,7 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
                 `• Source: ${targetWorkTree.branch}\n` +
                 `• Target: ${currentBranch}\n` +
                 `• No conflicts detected` +
+                changeTypeText +
                 filesText +
                 `\n\nSet avoid_dry_run parameter to copy the files (no history preserved).`,
             },
@@ -681,25 +707,70 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
       }
 
       // Get list of files that will be changed before checkout
-      let changedFiles: string[] = [];
+      let committedFiles: string[] = [];
+      let uncommittedFiles: string[] = [];
+
       try {
-        changedFiles = await gitDiffFileList(
+        committedFiles = await gitDiffFileList(
           currentBranch,
           targetWorkTree.branch,
           gitOptions,
         );
       } catch (error) {
-        console.warn(`Warning: Could not get file list: ${error}`);
+        console.warn(`Warning: Could not get committed file list: ${error}`);
       }
 
-      // Copy files from target branch using git checkout
       try {
-        await gitCheckoutFiles(targetWorkTree.branch, gitOptions);
+        uncommittedFiles = await gitUncommittedFileList({
+          cwd: worktree.worktreePath,
+        });
+      } catch (error) {
+        console.warn(`Warning: Could not get uncommitted file list: ${error}`);
+      }
 
+      // Copy files from target branch
+      try {
+        // First, checkout committed files from the branch
+        if (committedFiles.length > 0) {
+          await gitCheckoutFiles(targetWorkTree.branch, gitOptions);
+        }
+
+        // Then, physically copy uncommitted files from the worktree
+        if (uncommittedFiles.length > 0) {
+          const fs = await import("fs/promises");
+          const path = await import("path");
+
+          for (const file of uncommittedFiles) {
+            const sourcePath = path.join(worktree.worktreePath, file);
+            const targetPath = path.join(ownerRepo, file);
+
+            try {
+              // Create parent directory if it doesn't exist
+              await fs.mkdir(path.dirname(targetPath), { recursive: true });
+              // Copy the file
+              await fs.copyFile(sourcePath, targetPath);
+            } catch (copyError) {
+              console.warn(`Warning: Could not copy ${file}: ${copyError}`);
+            }
+          }
+        }
+
+        const allFiles = Array.from(
+          new Set([...committedFiles, ...uncommittedFiles]),
+        );
         const filesText =
-          changedFiles.length > 0
-            ? `\n\nFiles changed (${changedFiles.length}):\n${changedFiles.map((file) => `• ${file}`).join("\n")}`
+          allFiles.length > 0
+            ? `\n\nFiles changed (${allFiles.length}):\n${allFiles.map((file) => `• ${file}`).join("\n")}`
             : "\n\nNo files were changed.";
+
+        const changeTypeText =
+          committedFiles.length > 0 && uncommittedFiles.length > 0
+            ? `\n• Committed changes: ${committedFiles.length}\n• Uncommitted changes: ${uncommittedFiles.length}\n`
+            : committedFiles.length > 0
+              ? `\n• All changes are committed\n`
+              : uncommittedFiles.length > 0
+                ? `\n• All changes are uncommitted\n`
+                : "";
 
         return {
           content: [
@@ -710,7 +781,8 @@ export const mergeRemoteWorktreeChangesIntoLocal = {
                 `All files from worktree '${worktree_identifier}' (${targetWorkTree.branch}) have been copied to '${currentBranch}'.\n\n` +
                 `Operation: File copy (no history preserved)\n` +
                 `Source: ${targetWorkTree.branch}\n` +
-                `Target: ${currentBranch}` +
+                `Target: ${currentBranch}\n` +
+                changeTypeText +
                 filesText +
                 `\n\nThe files are now in your working directory. Review and commit as needed.`,
             },
