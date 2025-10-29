@@ -605,7 +605,7 @@ export const cleanWorktrees = {
 
           try {
             // Try to get diff stats from base branch
-            const { gitDiffStats } = await import("@/src/utils/git");
+            const { gitDiffStats } = await import("@/src/utils/git.js");
             const diffStats = await gitDiffStats(baseBranch, "HEAD", {
               cwd: worktree.worktreePath,
             });
@@ -613,7 +613,7 @@ export const cleanWorktrees = {
           } catch (error) {
             // If diff fails, try origin/baseBranch
             try {
-              const { gitDiffStats } = await import("@/src/utils/git");
+              const { gitDiffStats } = await import("@/src/utils/git.js");
               const diffStats = await gitDiffStats(
                 `origin/${baseBranch}`,
                 "HEAD",
