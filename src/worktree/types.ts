@@ -60,6 +60,7 @@ export interface CreateWorktreeOptions {
   task_description: string;
   base_branch?: string;
   git_repo_path?: string;
+  branch_name?: string;
 }
 
 export interface WorktreeCreationResult {

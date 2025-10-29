@@ -48,6 +48,11 @@ export const createTaskWorktree = {
         description: "Base branch (Optional)",
       },
       {
+        param: "branch_name",
+        alias: "n",
+        description: "Custom branch name (Optional). Worktree name will match.",
+      },
+      {
         param: "git_repo_path",
         alias: "p",
         description:
@@ -65,16 +70,24 @@ export const createTaskWorktree = {
       .describe("Description of the task or feature to work on"),
     git_repo_path: sharedParameters.git_repo_path(z),
     base_branch: sharedParameters.base_branch_optional(z),
+    branch_name: z
+      .string()
+      .optional()
+      .describe(
+        "Custom branch name (Optional). Worktree name will match the branch name.",
+      ),
   }),
   cb: async (
     args: Record<string, unknown>,
     { worktreeManager }: { worktreeManager: WorktreeManager },
   ) => {
-    const { task_description, base_branch, git_repo_path } = args as {
-      task_description: string;
-      base_branch?: string;
-      git_repo_path?: string;
-    };
+    const { task_description, base_branch, git_repo_path, branch_name } =
+      args as {
+        task_description: string;
+        base_branch?: string;
+        git_repo_path?: string;
+        branch_name?: string;
+      };
 
     const result = await assertGitRepoPath(git_repo_path);
     if (result) {
@@ -97,6 +110,7 @@ export const createTaskWorktree = {
         task_description,
         base_branch,
         git_repo_path,
+        branch_name,
       });
 
       return {

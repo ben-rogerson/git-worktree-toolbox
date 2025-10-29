@@ -92,6 +92,46 @@ describe("WorktreeManager", () => {
         }),
       ).rejects.toThrow("Git operation failed");
     });
+
+    it("should use custom branch_name when provided", async () => {
+      const customBranchName = "feature/custom-branch";
+
+      await manager.createWorktree({
+        task_description: "Test feature",
+        branch_name: customBranchName,
+      });
+
+      // Both worktree name and branch name should be the custom branch name
+      expect(mockGitOps.createWorkTree).toHaveBeenCalledWith(
+        customBranchName,
+        customBranchName,
+        undefined,
+        undefined,
+      );
+
+      // Metadata should also use the custom branch name
+      expect(mockMetadataManager.createMetadata).toHaveBeenCalledWith(
+        "/test/path",
+        expect.objectContaining({
+          worktree_name: customBranchName,
+          branch: customBranchName,
+        }),
+      );
+    });
+
+    it("should generate branch name from task_description when branch_name not provided", async () => {
+      await manager.createWorktree({
+        task_description: "Implement new feature",
+      });
+
+      // Should generate both worktree and branch name from task_description
+      expect(mockGitOps.createWorkTree).toHaveBeenCalledWith(
+        expect.stringMatching(/^implement-new-/i),
+        expect.stringMatching(/^implement-new-/i),
+        undefined,
+        undefined,
+      );
+    });
   });
 
   describe("getWorktreeByTaskId", () => {

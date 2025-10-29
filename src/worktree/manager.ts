@@ -39,8 +39,12 @@ export class WorktreeManager {
   async createWorktree(
     options: CreateWorktreeOptions,
   ): Promise<WorktreeCreationResult> {
-    const worktreeName = generateWorktreeName(options.task_description);
-    const branchName = generateBranchName(options.task_description);
+    // If branch_name is provided, use it and derive worktree name from it
+    // Otherwise, generate both from task_description
+    const branchName =
+      options.branch_name || generateBranchName(options.task_description);
+    const worktreeName =
+      options.branch_name || generateWorktreeName(options.task_description);
 
     try {
       // Step 1: Create git worktree
